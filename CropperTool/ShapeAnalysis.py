@@ -300,6 +300,8 @@ class Grid(object):
     def __calculate_missing(self, row:list, g:sle):
         #TODO calculate missing points by using the straight line equation
         # and the known distances
+        
+        #check which one are missing
         pass
 
 

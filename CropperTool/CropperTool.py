@@ -23,6 +23,7 @@ tool for cropping a game board of rectangular shapes into single images
 import cv2
 import numpy as np
 import time
+import os
 
 # local:
 import ShapeAnalysis
@@ -30,7 +31,7 @@ import ShapeAnalysis
 #  SECTION: Global definitions
 # =========================================================================== #
 # path of the taken photo of nao
-FILENAME = "Testbilder/photo_test6.jpg"
+FILENAME = "Testbilder\photo_test6.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -52,7 +53,10 @@ def read_image(fileName:str)->np.array:
     np.array
         3D matrix based on the colors in the image
     """
-    return cv2.imread(fileName)
+    #make the path absolute without adding the file name of the current script
+    path = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(path, fileName)
+    return cv2.imread(image_path)
 
 
 def find_red_dots(img:np.array)->dict:
@@ -149,7 +153,7 @@ def find_paper(img: np.array) -> np.array:
     return result
  
  
-def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
+def cut_rectangles(img:np.array, edges:list, count:int, debug=True):
     """
     cut out the single rectangles and save them into new images
 
@@ -178,15 +182,20 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
     
     ## (3) do bit-op
     dst = cv2.bitwise_and(croped, croped, mask=mask)
-    cv2.imwrite("cutouts/roi"+str(count)+".jpg", dst)
+    
+    ## (4) save images
+    path = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(path, "cutouts/roi")
+    cv2.imwrite(image_path+str(count)+".jpg", dst)
     
     if debug:
+        image_path = os.path.join(path, "cutouts/debug")
         # Blue color in BGR
         color = (255, 0, 0)
         # Line thickness of 2 px
         thickness = 2
         image = cv2.polylines(img.copy(), [pts], True, color, 8)
-        cv2.imwrite("cutouts/debug"+str(count)+".jpg", image)
+        cv2.imwrite(image_path + str(count)+".jpg", image)
 
         
 def seperate_the_objects(fileName:str):
@@ -198,21 +207,23 @@ def seperate_the_objects(fileName:str):
     fileName : str
         path of the board game image 
     """
-    
     begin = time.time()
     #Read in image and rezize
     img = read_image(fileName)
-    img = cv2.resize(img, (1500, 1000))
-    #Find paper and resize
-    paper = find_paper(img)
-    #Find red dots
-    points = find_red_dots(paper)
+    try:
+        img = cv2.resize(img, (1500, 1000))
+        #Find paper and resize
+        paper = find_paper(img)
+        #Find red dots
+        points = find_red_dots(paper)
 
-    Shape = ShapeAnalysis.Grid(points)
-    rectangles = Shape.find_rectangles()
-    for key in rectangles:
-        cut_rectangles(img, rectangles[key], key)
-
+        Shape = ShapeAnalysis.Grid(points)
+        rectangles = Shape.find_rectangles()
+        for key in rectangles:
+            cut_rectangles(img, rectangles[key], key)
+    except Exception as e:
+        print('error:')
+        print(str(e))
     print(float(time.time()-begin))
     
 # =========================================================================== #
@@ -221,4 +232,4 @@ def seperate_the_objects(fileName:str):
 
 if __name__ == '__main__':
     seperate_the_objects(FILENAME)
-    pass
+    
