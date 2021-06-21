@@ -53,4 +53,4 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 Helpfull links:
 
-* [all the answers](https://www.google.de)
+* [all the answers](https://www.google.de/search?q=how+to+use+google&sxsrf=ALeKk01Pw_bxWGHPxYMFQxHBGvFGsr2o-Q%3A1624293592793&source=hp&ei=2MDQYOeDLsSAaaKmo8AH&iflsig=AINFCbYAAAAAYNDO6AEUucQ4syTqAp9GA4a02F4ETKfn&oq=how+to+use+google&gs_lcp=Cgdnd3Mtd2l6EAMyBQgAEMsBMgUIABDLATIFCAAQywEyBQgAEMsBMgUIABDLATIFCAAQywEyBQgAEMsBMgUIABDLATIFCAAQywEyBQgAEMsBOgcIIxDqAhAnOgQIIxAnOggIABDHARCjAjoCCAA6AgguOgUILhDLAVCG8ghY0oUJYKuHCWgBcAB4AIABwQGIAekLkgEEMTYuMZgBAKABAaoBB2d3cy13aXqwAQo&sclient=gws-wiz&ved=0ahUKEwjnz-2UlanxAhVEQBoKHSLTCHgQ4dUDCAk&uact=5)
