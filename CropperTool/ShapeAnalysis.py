@@ -22,6 +22,8 @@ Class for analysing the shape of a random number and position of found points.
 # standard:
 import numpy as np
 import math
+
+from numpy.core import numeric
 # local:
 import StraightLineEquation as sle
 # =========================================================================== #
@@ -31,10 +33,6 @@ import StraightLineEquation as sle
 MINIMAL_DISTANCE = 100
 # amount of red dots in one horizantal line 
 DOTS_IN_LINE = 6
-
-# =========================================================================== #
-#  SECTION: Function definitions
-# =========================================================================== #
 
 # =========================================================================== #
 #  SECTION: Class definitions
@@ -188,8 +186,8 @@ class Grid(object):
                     dist = np.linalg.norm(vector1-vector2)
                     D[i,j] = dist
         return D
-  
     
+     
     def __calculate_angles(self):
         """calculate the angle between every point and save it into a angle matrix A
 
@@ -289,7 +287,7 @@ class Grid(object):
         lowerX = 0
         for coord in row:
             x = coord[0]
-            in_between = lowerX <= x and x <= upperX
+            in_between = check_inBetween(x, upper=upperX, lower=lowerX)
             if not in_between:
                 cleaned_row.append(coord)   
             upperX = x+ MINIMAL_DISTANCE
@@ -298,12 +296,29 @@ class Grid(object):
             
             
     def __calculate_missing(self, row:list, g:sle):
-        #TODO calculate missing points by using the straight line equation
-        # and the known distances
-        
-        #check which one are missing
-        pass
-
+        # calculate all the distances between the sorted coords
+        distances = list()
+        for i, vector in enumerate(row):
+            if (i+1) == len(row):
+                break
+            else:
+                vector1 = np.asarray(vector)
+                vector2 = np.asarray(row[i+1])
+                dist = np.linalg.norm(vector1-vector2)
+                distances.append(dist)
+        #get the minimal value and check which distances
+        # are in the range +/-0.1%
+        min_values = min(distances)
+        normal_values = [x for x in distances if check_inBetween(
+            x,
+            min_values*1.1,
+            min_values*0.9)]
+        # claculate the mean to get the "normal distance"
+        mean = sum(normal_values)/len(normal_values)
+        print(mean)
+        g.get_equation()
+        g.calculate_coord_in_distance(np.asarray(row[0]), mean)
+        print(row[1])
 
     def __clean_row(self, row: list, g: sle)->list:
         """
@@ -323,12 +338,37 @@ class Grid(object):
         #sort the coords descending by the x value
         row.sort(reverse=True)
         row = self.__delete_doubles(row)
+        del row[-3]
+        print(len(row))
         if len(row) < DOTS_IN_LINE:
             row = self.__calculate_missing(row, g)
         elif len(row) == DOTS_IN_LINE:
             return row
         print("Something went wrong during the data cleaning")
-                
+        
+
+
+# =========================================================================== #
+#  SECTION: Function definitions
+# =========================================================================== #
+def check_inBetween(value: float, upper: float = 0, lower:float=0)->bool:
+    """
+    check if the value is in a specified range
+    Parameters
+    ----------
+    value : float
+        value to ckeck
+    upper : float, optional
+        upper limit, by default 0
+    lower : float, optional
+        lower limit, by default 0
+    Returns
+    -------
+    bool
+        is the value in the range
+    """
+    return lower <= value and value <= upper
+        
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #

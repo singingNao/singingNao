@@ -150,6 +150,23 @@ class StraightLineEquation(object):
             to the giving x value
         """
         return (x_value - b[0])/a[0]
+    
+    def calculate_coord_in_distance(self, refCoord:np.array, d:float)->np.array:
+        a1, a2 = self.__seperate_2Dvector(self.__supportVector)
+        b1, b2 = self.__seperate_2Dvector(self.__directionVector)
+        x, y = self.__seperate_2Dvector(refCoord)
+        print(refCoord)
+        # calculate 
+        c1 = a1**2 + a2**2
+        c2 = (a1*(x-b1)+a2*(y-b2)) / c1
+        c3 =  ((b1-x)**2 + (b2-y)**2 - d**2) / c1
+        c4 = c2**2 - c3
+        t1 = c2 - np.sqrt(c4)
+        t2 = c2 + np.sqrt(c4)
+        print(f't: {t1}\n c1: {c1}\n c2: {c2}\n c3: {c3}\n c4: {c4}')
+        print(self.calculation(t1, self.__supportVector,self.__directionVector))
+        #print(f't: {t2}\n c1: {c1}\n c2: {c2}\n c3: {c3}\nc4: {c4}')
+        #print(self.calculation(t2, self.__supportVector, self.__directionVector))
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Private Methods
@@ -210,6 +227,9 @@ class StraightLineEquation(object):
             tMin, self.__directionVector, lower_supportVector)[1]
         return yMin, yMax
 
+    def __seperate_2Dvector(self, vector:np.array)->tuple:
+        return vector.item(0), vector.item(1)
+        
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #
