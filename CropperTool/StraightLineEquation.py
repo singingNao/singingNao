@@ -152,6 +152,7 @@ class StraightLineEquation(object):
         return (x_value - b[0])/a[0]
     
     def calculate_coord_in_distance(self, refCoord:np.array, d:float)->np.array:
+        # TODO why is the calculation only working for the first values
         a1, a2 = self.__seperate_2Dvector(self.__supportVector)
         b1, b2 = self.__seperate_2Dvector(self.__directionVector)
         x, y = self.__seperate_2Dvector(refCoord)
