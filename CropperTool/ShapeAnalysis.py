@@ -51,10 +51,12 @@ class Grid(object):
     def __init__(self, coordinates:dict):
         # dict of tuples with (x,y)
         self.__coordiantes = coordinates
-        # totoal numer of found points
+        # total number of found points
         self.__knots = len(coordinates)
         # calculate the distances from each point to each point
         self.__distances = self.__calculate_distances()
+        # corners
+        self.corners = self.__find_corners()
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Getter/Setter
@@ -247,7 +249,7 @@ class Grid(object):
         Parameters
         ----------
         referencePointKey : tuple
-            (x,y))
+            (x,y)
         row : list
             list of distances
 
@@ -313,12 +315,18 @@ class Grid(object):
             x,
             min_values*1.1,
             min_values*0.9)]
+        #print(row)
+        for i, distance in enumerate(distances):
+            if distance in normal_values:
+                fitting_val = row[i]
+                print(fitting_val)
+            
         # claculate the mean to get the "normal distance"
         mean = sum(normal_values)/len(normal_values)
-        print(mean)
-        g.get_equation()
+        
+        #calculate the missing coord
         g.calculate_coord_in_distance(np.asarray(row[0]), mean)
-        print(row[1])
+        
 
     def __clean_row(self, row: list, g: sle)->list:
         """
@@ -338,8 +346,8 @@ class Grid(object):
         #sort the coords descending by the x value
         row.sort(reverse=True)
         row = self.__delete_doubles(row)
-        del row[-3]
-        print(len(row))
+        #del row[-3]
+        #print(len(row))
         if len(row) < DOTS_IN_LINE:
             row = self.__calculate_missing(row, g)
         elif len(row) == DOTS_IN_LINE:
@@ -347,7 +355,51 @@ class Grid(object):
         print("Something went wrong during the data cleaning")
         
 
+    def __find_corners(self)->list:
+        """
+        find the corners from the "rectangular" shaped grid:
+        
+        A-------D\n
+        |       |\n
+        B-------C\n
 
+        Returns
+        -------
+        list
+            4 corner coordinates:
+            [0]: A
+            [1]: B
+            [2]: C
+            [3]: D
+        """
+        corners = list()
+        old_points = list()
+        
+        coords = self.__coordiantes
+        #print(coords)
+        D = self.__distances
+        while True:
+            if len(corners)==4:
+                break
+            max_val = np.max(D)
+            p1, p2 = tuple(np.where(D == max_val)[0])
+            #print(p1)
+            #print(p2)
+            if p1 in old_points or p2 in old_points:
+                D[p1, p2] = 0
+                D[p2, p1] = 0
+            else:
+                corners.append(p1)
+                corners.append(p2)
+            old_points.append(p1)
+            old_points.append(p2)
+        corners.sort()
+        A = coords[corners[2]]
+        B = coords[corners[1]]
+        C = coords[corners[0]]
+        D = coords[corners[3]]
+        return [A,B,C,D]
+        
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
