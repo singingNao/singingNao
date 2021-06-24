@@ -153,7 +153,7 @@ def find_paper(img: np.array) -> np.array:
     return result
  
  
-def cut_rectangles(img:np.array, edges:list, count:int, debug=True):
+def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
     """
     cut out the single rectangles and save them into new images
 
@@ -196,7 +196,57 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=True):
         thickness = 2
         image = cv2.polylines(img.copy(), [pts], True, color, 8)
         cv2.imwrite(image_path + str(count)+".jpg", image)
+        cv2.imshow('test',image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
+
+def warp_perspektive(img:np.array, corners:list)->np.array:
+    """
+    warpes the perspective of the image with the information of the 
+    red dot corners (needs corners to function!!!)
+
+    Parameters
+    ----------
+    img : np.array
+        image to warp
+    corners : list
+        list of the corner coordinates
+
+    Returns
+    -------
+    np.array
+        warped image
+    """
+    pt_A = corners[0]
+    pt_B = corners[1]
+    pt_C = corners[2]
+    pt_D = corners[3]
+    
+    # Here, I have used L2 norm. You can use L1 also.
+    width_AD = np.sqrt(((pt_A[0] - pt_D[0]) ** 2) + ((pt_A[1] - pt_D[1]) ** 2))
+    width_BC = np.sqrt(((pt_B[0] - pt_C[0]) ** 2) + ((pt_B[1] - pt_C[1]) ** 2))
+    maxWidth = max(int(width_AD), int(width_BC))
+
+
+    height_AB = np.sqrt(((pt_A[0] - pt_B[0]) ** 2) + ((pt_A[1] - pt_B[1]) ** 2))
+    height_CD = np.sqrt(((pt_C[0] - pt_D[0]) ** 2) + ((pt_C[1] - pt_D[1]) ** 2))
+    maxHeight = max(int(height_AB), int(height_CD))
+        
+    input_pts = np.float32([pt_A, pt_B, pt_C, pt_D])
+
+
+    output_pts = np.float32([[10, 10],
+                             [10, maxHeight - 10],  
+                             [maxWidth - 10, maxHeight - 10],
+                             [maxWidth - 10, 10]])
+    # Compute the perspective transform M
+    M = cv2.getPerspectiveTransform(input_pts, output_pts)
+    img_copy = np.copy(img)
+    out = cv2.warpPerspective(
+        img_copy, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
+    return cv2.resize(out, (1500, 1000))
+        
         
 def seperate_the_objects(fileName:str):
     """
@@ -210,17 +260,26 @@ def seperate_the_objects(fileName:str):
     begin = time.time()
     #Read in image and rezize
     img = read_image(fileName)
+    #warp_perspektive(img)
     try:
         img = cv2.resize(img, (1500, 1000))
-        #Find paper and resize
+        # Find paper and resize
         paper = find_paper(img)
-        #Find red dots
+        # Find red dots
         points = find_red_dots(paper)
-
-        Shape = ShapeAnalysis.Grid(points)
-        rectangles = Shape.find_rectangles()
+        Shape1 = ShapeAnalysis.Grid(points)
+        # warp the perspektive
+        warped = warp_perspektive(img, Shape1.corners)
+        points = find_red_dots(warped)
+        del Shape1
+        # find the new coordinates out of the warped photo
+        new_points = find_red_dots(warped)
+        Shape2 = ShapeAnalysis.Grid(new_points)
+        # find rectangles
+        rectangles = Shape2.find_rectangles()
         for key in rectangles:
-            cut_rectangles(img, rectangles[key], key)
+            cut_rectangles(warped, rectangles[key], key)
+            
     except Exception as e:
         print('error:')
         print(str(e))
