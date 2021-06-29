@@ -31,7 +31,7 @@ import ShapeAnalysis
 #  SECTION: Global definitions
 # =========================================================================== #
 # path of the taken photo of nao
-FILENAME = "Testbilder\photo_test6.jpg"
+FILENAME = "Testbilder/test8.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -59,7 +59,7 @@ def read_image(fileName:str)->np.array:
     return cv2.imread(image_path)
 
 
-def find_red_dots(img:np.array)->dict:
+def find_red_dots(img:np.array, debug=False)->dict:
     """finding red dots on an image
 
     Parameters
@@ -104,7 +104,10 @@ def find_red_dots(img:np.array)->dict:
             img = cv2.circle(img, center, radius, (0, 255, 0), 10)
             cv2.circle(img, center, radius, (0, 255, 0), 10)
             x, y, w, h = cv2.boundingRect(c)
-            
+    if debug:
+        cv2.imshow('test', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     return points
 
 
@@ -169,12 +172,12 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
         if True saves image where the found rectangle boarders are marked, by default False
     """
     original_image_copy = img.copy()
-    pts = np.array(edges)
+    pts = np.array(edges).astype(np.int)
     ## (1) Crop the bounding rect
     rect = cv2.boundingRect(pts)
     x, y, w, h = rect
     croped = original_image_copy[y:y+h, x:x+w]
-
+    
     ## (2) make mask
     pts2 = pts - pts.min(axis=0)
     mask = np.zeros(croped.shape[:2], np.uint8)
@@ -218,10 +221,10 @@ def warp_perspektive(img:np.array, corners:list)->np.array:
     np.array
         warped image
     """
-    pt_A = corners[0]
-    pt_B = corners[1]
-    pt_C = corners[2]
-    pt_D = corners[3]
+    pt_A = corners['A']
+    pt_B = corners['B']
+    pt_C = corners['C']
+    pt_D = corners['D']
     
     # Here, I have used L2 norm. You can use L1 also.
     width_AD = np.sqrt(((pt_A[0] - pt_D[0]) ** 2) + ((pt_A[1] - pt_D[1]) ** 2))
@@ -267,16 +270,16 @@ def seperate_the_objects(fileName:str):
         paper = find_paper(img)
         # Find red dots
         points = find_red_dots(paper)
-        Shape1 = ShapeAnalysis.Grid(points)
+        Shape = ShapeAnalysis.Grid(points)
+        #quit()
         # warp the perspektive
-        warped = warp_perspektive(img, Shape1.corners)
+        warped = warp_perspektive(img, Shape.corners)
         points = find_red_dots(warped)
-        del Shape1
-        # find the new coordinates out of the warped photo
+        # find the new coordinates out of the warped photov
         new_points = find_red_dots(warped)
-        Shape2 = ShapeAnalysis.Grid(new_points)
+        Shape.set_coordinates(new_points)
         # find rectangles
-        rectangles = Shape2.find_rectangles()
+        rectangles = Shape.find_rectangles()
         for key in rectangles:
             cut_rectangles(warped, rectangles[key], key)
             

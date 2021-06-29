@@ -37,26 +37,27 @@ import numpy as np
 
 
 class StraightLineEquation(object):
-    counter : int = 0
+    counter : int = 1
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
 
-    def __init__(self, a:tuple, b:tuple):
+    def __init__(self, a: np.array, b: np.array):
         """
         create new straight line equation out of two points (2D-vectors) 
         Parameters
         ----------
-        a : tuple
+        a : numpy array
             start point (x,y)
-        b : tuple
+        b : numpy array
             end point (x,y)
         """
-        # change start point into support vector (type numpy array)
-        self.__supportVector = np.asarray(a)
-        # calculate direction vector via b - a (type numpy array)
-        self.__directionVector = np.asarray(b)-np.asarray(a)
+        # start point is the new support vector
+        self.__supportVector = a
+        # calculate direction vector via b - a 
+        self.__directionVector = b-a
         # increment the instance counter
+        self.counter = StraightLineEquation.counter
         StraightLineEquation.counter +=1
         
         
@@ -71,7 +72,7 @@ class StraightLineEquation(object):
     
 
     def get_equation(self):
-        print("New equation: g{0}: x(t)={1}t+{2}".format(StraightLineEquation.counter,
+        print("New equation: g{0}: x(t)={1}t+{2}".format(self.counter,
                                                          self.__directionVector, 
                                                          self.__supportVector))
     # ----------------------------------------------------------------------- #
@@ -110,23 +111,21 @@ class StraightLineEquation(object):
                 listOfTruth.append(False)
         return listOfTruth
                 
-    def calculation(self, t: float, a: np.array, b: np.array) -> np.array:
+    def calculate(self, t: float) -> np.array:
         """
         calculate a new point by using the straight line equation
         Parameters
         ----------
         t : float
             variable to shift into the direction of the directional vector
-        a : np.array
-            support vector
-        b : np.array
-            directional vector
 
         Returns
         -------
         np.array
             calculated point on the line
         """
+        a = self.__directionVector
+        b = self.__supportVector
         return a*t+b
 
     def calculate_t(self, x_value:float, a:np.array, b:np.array)->float:
