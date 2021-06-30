@@ -353,7 +353,46 @@ def check_inBetween(value: float, upper: float = 0, lower:float=0)->bool:
         is the value in the range
     """
     return lower <= value and value <= upper
-        
+ 
+
+def round_data(data, err=0, digits=-1) -> tuple:
+    """
+    round_data
+    Round the data by using DIN 1333. The position of the first segnificant␣
+    ,→digit of the error
+    is used as the the last segnificant digit of the data. If the first␣
+    ,→segnificant digit of the error
+    is a 1 or 2, one more digit is added.
+    Parameters
+    ----------
+    data : [float]
+    floating number with inaccuracy
+    err : [float, optional]
+    floating number of the data inaccuracy
+    Returns
+    digits : [int, optional]
+    if digits are set, the rounding is not made by DIN 1333
+    the numbers will be returned with the wanted number of digits
+    -------
+    [tuple of str]
+    [0] rounded data by DIN 1333
+    [1] rounded error by DIN 1333
+    """
+    if digits >= -1:
+        counter = 0
+        for number in str(err).replace('.', ''):
+            if number == '0':
+                counter += 1
+            elif number == '1' or number == '2':
+                counter += 1
+                break
+            else:
+                break
+    else:
+        counter = digits
+    rounded_err = format(err, f'.{counter}f')
+    rounded_data = format(data, f'.{counter}f')
+    return rounded_data, rounded_err
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #
