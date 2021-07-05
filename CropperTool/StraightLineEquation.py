@@ -3,7 +3,7 @@
 # @Date    : 2021-04-14 14:57:35
 # @Author  : Tom Brandherm (tom.brandherm@msasafety.com)
 # @Link    : link
-# @Version : 0.0.1
+# @Version : 1.0.0
 """
 Straight line equation in two dimensional context: vec(f)(t)=vec(a)*t+vec(b) 
 """

@@ -3,7 +3,7 @@
 # @Date    : 2021-04-14 14:57:35
 # @Author  : Tom Brandherm (s_brandherm19@stud.hwr-berlin.de)
 # @Link    : link
-# @Version : 0.0.1
+# @Version : 1.0.0
 """
 Class for analysing the shape of a random number and position of found points.
 """
