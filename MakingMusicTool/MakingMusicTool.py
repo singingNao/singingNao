@@ -19,7 +19,10 @@ Coming Soon: Making Music with Python
 # =========================================================================== #
 #  SECTION: Imports                                                           
 # =========================================================================== #
+import os
 
+from pydub import AudioSegment
+from pydub.playback import play
 # =========================================================================== #
 #  SECTION: Global definitions
 # =========================================================================== #
@@ -76,6 +79,27 @@ class ClassName(object):
 # =========================================================================== #
 
 if __name__ == '__main__':
-    pass
+    
+    
+    ###### EXAMPLE ######
+    fileName = "Sounds\mixkit-metal-hit-drum-sound-550.wav"
+    
+    path = os.path.dirname(os.path.abspath(__file__))
+    sound_path = os.path.join(path, fileName)
+    #input audio file
+    sound = AudioSegment.from_file(sound_path, format="wav")
+    #cut audio file
+    short_sound = sound[:1000] #first two seconds of the audio file (milliseconds) 
+    combined = short_sound
+    for i in range(5):
+        # make the sound i dbB louder
+        short_sound = short_sound + i
+        # append two sounds
+        combined = combined + short_sound 
+    
+    #play sound
+    play(combined)
+    
+    
 
 
