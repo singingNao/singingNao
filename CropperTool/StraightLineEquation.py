@@ -8,12 +8,12 @@
 Straight line equation in two dimensional context: vec(f)(t)=vec(a)*t+vec(b) 
 """
 # =========================================================================== #
-#  Copyright 2021 MSA Safety as unpublished work
+#  Copyright 2021 Team Awesome
 # =========================================================================== #
 #  All Rights Reserved.
-#  The information contained herein is confidential property of MSA. The use,
-#  copying, transfer or disclosure of such information is prohibited except
-#  by express written agreement with MSA.
+#  The information contained herein is confidential property of Team Awesome.
+#  The use, copying, transfer or disclosure of such information is prohibited
+#  except by express written agreement with Team Awesome.
 # =========================================================================== #
 
 # =========================================================================== #
