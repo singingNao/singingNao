@@ -3,14 +3,14 @@
 # @Date    : 2021-05-07 16:05:35
 # @Author  : Tom Brandherm (tom.brandherm@msasafety.com)
 # @Link    : link
-# @Version : 0.0.1
+# @Version : 1.0.0
 """
 Making music with python is possible by using this tool. As a import pattern 
 please use a created csv file with one or more rows like:
 
 [one of the given instruments],[volume from 1 to 3],[music note 1],...[music note n]
 
-A 4/4 stroke is used here, so the sum of the notes in one row have to be equals one.
+A 4/4 time is used here, so the sum of the notes in one row have to be equals one.
 The notation for the notes into the csv is: 
 
 1/16    =>  16
@@ -49,14 +49,14 @@ FILENAME = "sound_pattern.csv"
 class MusicMaker(object):
     """
     MusicMaker is a class to that can create soundtracks out of a given pattern.
-    The pattern needs information about a instrument, the volume and a 4/4-stroke
+    The pattern needs information about a instrument, the volume and a 4/4-time
     rythm.
     """
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
 
-    def __init__(self, fileName: str, bpm:int):
+    def __init__(self, fileName: str, bpm:int=60):
         ## public
         # input from the csv file
         self.sound_pattern = self.analyse_data(fileName)
@@ -66,8 +66,8 @@ class MusicMaker(object):
                                 'bass': 'mixkit-bass-guitar-single-note-2331.wav',
                                 'tribal drum': 'mixkit-tribal-dry-drum-558.wav',
                                 'violin': 'mixkit-orchestral-violin-jingle-2280.wav'}
-        # convert the beats per minutes (bpm) into the duration of one stroke [ms]
-        self.__stroke_duration = 60*4/bpm*1000
+        # convert the beats per minutes (bpm) into the duration of one 4/4 time [ms]
+        self.__44time_duration = 60*4/bpm*1000
         # reference volume for the used audio files
         self.__ref_dBFS = -25
         
@@ -119,8 +119,8 @@ class MusicMaker(object):
         """
         Use the imported music information to create a soundtrack.
         """
-        # silent audio segment with defined length for one stroke
-        music = AudioSegment.silent(duration=self.__stroke_duration)
+        # silent audio segment with defined length for one 4/4 time
+        music = AudioSegment.silent(duration=self.__44time_duration)
         # iterating though the importet patterns
         for pattern in self.sound_pattern.values():
             # get instrument sound
@@ -135,15 +135,15 @@ class MusicMaker(object):
             notes = pattern[2:]
             # create soundtrack of the sound segment and the notes
             soundtrack = self.play_instrument(sound, notes)
-            # make some space if sound is longer than one stroke
+            # make some space if sound is longer than one 4/4 time
             music =  self.__make_space(music, soundtrack)
             # overlay the new soundtrack to the existing music
             music = music.overlay(soundtrack)
         print(len(music))
         # square the music length
         for i in range(2):
-            music += AudioSegment.silent(duration=self.__stroke_duration)
-            music = music.overlay(music, position=self.__stroke_duration)
+            music += AudioSegment.silent(duration=self.__44time_duration)
+            music = music.overlay(music, position=self.__44time_duration)
         music = self.delete_silence(music)
         # export the new soundtrack file
         music.export('new_music.wav', format='wav')
@@ -167,8 +167,8 @@ class MusicMaker(object):
         AudioSegment
             created soundtrack
         """
-        # silent audio segment with defined length for one stroke
-        soundtrack = AudioSegment.silent(duration=self.__stroke_duration)
+        # silent audio segment with defined length for one 4/4 time
+        soundtrack = AudioSegment.silent(duration=self.__44time_duration)
         # first start of the overlay
         time = 0
         # iterating through the list of notes
@@ -176,8 +176,8 @@ class MusicMaker(object):
             # overlay of soundtrack and instrumental sound at a defined position
             soundtrack = soundtrack.overlay(sound, position=time)
             # calculating the position of the next overlay out of the notes
-            time += self.__stroke_duration/int(note)
-            # make some space if sound is longer than one stroke
+            time += self.__44time_duration/int(note)
+            # make some space if sound is longer than one 4/4 time
             soundtrack = self.__make_space(soundtrack, sound, time)
         soundtrack = soundtrack.overlay(sound, position=time)
         return soundtrack
