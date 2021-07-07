@@ -64,7 +64,8 @@ class MusicMaker(object):
         # given instrument beat audio files (wav-format!!!)
         self.__instruments =   {'drum': 'mixkit-metal-hit-drum-sound-550.wav',
                                 'bass': 'mixkit-bass-guitar-single-note-2331.wav',
-                                'tribal drum': 'mixkit-tribal-dry-drum-558.wav'}
+                                'tribal drum': 'mixkit-tribal-dry-drum-558.wav',
+                                'violin': 'mixkit-orchestral-violin-jingle-2280.wav'}
         # convert the beats per minutes (bpm) into the duration of one stroke [ms]
         self.__stroke_duration = 60*4/bpm*1000
         # reference volume for the used audio files
@@ -78,7 +79,7 @@ class MusicMaker(object):
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Public Methods
     # ----------------------------------------------------------------------- #
-    def analyse_data(self, fileName:str):
+    def analyse_data(self, fileName:str)->dict:
         """
         Import of the csv data and converting it into a dict of sound patterns.
 
@@ -110,7 +111,7 @@ class MusicMaker(object):
                     sound_pattern[label+str(i)]=row
                 else:
                     #TODO do something if notes aren't valid
-                    print("Check the pattern")
+                    print(f"Check the pattern of row {i}")
         return sound_pattern
     
     
@@ -134,18 +135,23 @@ class MusicMaker(object):
             notes = pattern[2:]
             # create soundtrack of the sound segment and the notes
             soundtrack = self.play_instrument(sound, notes)
+            # make some space if sound is longer than one stroke
+            music =  self.__make_space(music, soundtrack)
             # overlay the new soundtrack to the existing music
             music = music.overlay(soundtrack)
-        # squre the music length
+        print(len(music))
+        # square the music length
         for i in range(2):
-            music += music
-        #export the new soundtrack file
+            music += AudioSegment.silent(duration=self.__stroke_duration)
+            music = music.overlay(music, position=self.__stroke_duration)
+        music = self.delete_silence(music)
+        # export the new soundtrack file
         music.export('new_music.wav', format='wav')
-        #play the new soundtrack via speaker
-        play(music)
+        # play the new soundtrack via speaker
+        # play(music)
         
         
-    def play_instrument(self, sound: AudioSegment, notes: list):
+    def play_instrument(self, sound: AudioSegment, notes: list)->AudioSegment:
         """
         Create a soundtrack out of a given instrument sound and a note pattern.
 
@@ -171,14 +177,34 @@ class MusicMaker(object):
             soundtrack = soundtrack.overlay(sound, position=time)
             # calculating the position of the next overlay out of the notes
             time += self.__stroke_duration/int(note)
+            # make some space if sound is longer than one stroke
+            soundtrack = self.__make_space(soundtrack, sound, time)
         soundtrack = soundtrack.overlay(sound, position=time)
         return soundtrack
     
     
+    def delete_silence(self, sound: AudioSegment) -> AudioSegment:
+        """
+        Delete all the silent parts of a soundtrack. 
+
+        Parameters
+        ----------
+        sound : AudioSegment
+            input sound
+
+        Returns
+        -------
+        AudioSegment
+            output sound without silence
+        """
+        start_trim = self.__detect_leading_silence(sound)
+        end_trim = self.__detect_leading_silence(sound.reverse())
+        duration = len(sound)
+        return sound[start_trim:duration-end_trim]
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Private Methods
     # ----------------------------------------------------------------------- #
-    def __check_notes(self, pattern:list):
+    def __check_notes(self, pattern:list)->bool:
         """
         check notes if the sum of all notes is equal one
 
@@ -189,7 +215,7 @@ class MusicMaker(object):
 
         Returns
         -------
-        boolean
+        bool
             True, if sum is 1
             False, if sum is not equal 1
         """
@@ -201,7 +227,7 @@ class MusicMaker(object):
         return False
 
 
-    def __choose_instrument(self, instrument:str):
+    def __choose_instrument(self, instrument:str)->AudioSegment:
         """
         Choose the instrument out of the user input pattern and returning the
         associated audio segment.
@@ -222,10 +248,12 @@ class MusicMaker(object):
         path = os.path.dirname(os.path.abspath(__file__))
         abs_path = os.path.join(path, 'Sounds',fileName)
         sound = AudioSegment.from_file(abs_path, format="wav")
-        return sound
+        # deletent the silent parts
+        return self.delete_silence(sound)
+        
     
     
-    def __choose_volume(self, volume:str):
+    def __choose_volume(self, volume:str)->int:
         """
         Converting the input 1,2,3 into the volume change in dB.
 
@@ -247,7 +275,7 @@ class MusicMaker(object):
             return 4
 
     
-    def __sync_target_amplitute(self, sound:AudioSegment, target_dBFS:int):
+    def __sync_target_amplitute(self, sound:AudioSegment, target_dBFS:int)->AudioSegment:
         """
         Setting the volume of a audio segment to a defined volume.
 
@@ -265,6 +293,60 @@ class MusicMaker(object):
         """
         change_in_dBFS = target_dBFS - sound.dBFS
         return sound.apply_gain(change_in_dBFS)
+    
+    
+    def __make_space(self, backgroundSound:AudioSegment, frontSound:AudioSegment, position:float=0)->AudioSegment:
+        """
+        Checks background sound if a overlay is possible with a front sound. If the fron sound would be cut, 
+        the background will be extended.
+
+        Parameters
+        ----------
+        backgroundSound : AudioSegment
+            main soundtrack in the background
+        frontSound : AudioSegment
+            new sound that should be overlayed over the background
+        position : float, optional
+            position of the overlay, by default 0
+
+        Returns
+        -------
+        AudioSegment
+            background sound, which is should the situation arises extended
+        """
+        if (position + len(frontSound)) > len(backgroundSound):
+            overlap = position + len(frontSound) - len(backgroundSound)
+            silent = AudioSegment.silent(duration=overlap)
+            backgroundSound += silent
+        return backgroundSound
+    
+    
+    def __detect_leading_silence(self, sound:AudioSegment, silence_threshold:int=-50.0, chunk_size:int=10)->int:
+        """
+        iterates over chunks until you find the first one with sound
+
+        Parameters
+        ----------
+        sound : AudioSegment
+            sound in which silence shoulb be detected
+        silence_threshold : int, optional
+            dB limit for silence, by default -50.0
+        chunk_size : int, optional
+            chunk of the sound in ms, by default 10
+
+        Returns
+        -------
+        int
+            first time without silence
+        """
+        trim_ms = 0  # ms
+
+        assert chunk_size > 0  # to avoid infinite loop
+        while sound[trim_ms:trim_ms+chunk_size].dBFS < silence_threshold and trim_ms < len(sound):
+            trim_ms += chunk_size
+        return trim_ms
+    
+    
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
@@ -275,7 +357,7 @@ class MusicMaker(object):
 # =========================================================================== #
 
 if __name__ == '__main__':
-    musicMaker = MusicMaker(FILENAME, bpm=110)
+    musicMaker = MusicMaker(FILENAME, bpm=120)
     musicMaker.makeMusic()
 
 
