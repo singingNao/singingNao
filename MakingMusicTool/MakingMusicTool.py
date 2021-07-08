@@ -33,6 +33,8 @@ The notation for the notes into the csv is:
 # =========================================================================== #
 import os
 import csv
+import matplotlib.pyplot as plt
+import numpy as np
 
 from pydub import AudioSegment
 from pydub.playback import play
@@ -108,7 +110,7 @@ class MusicMaker(object):
         return sound_pattern
     
     
-    def make_music(self):
+    def create_music_file(self)->AudioSegment:
         """
         Use the imported music information to create a soundtrack.
         """
@@ -117,7 +119,7 @@ class MusicMaker(object):
         for pattern in self.sound_pattern.values():
             sound = self.__get_instrument_sound(pattern[0])
             sound = self.__set_volume(sound, self.__ref_dBFS)
-            volume = self.__get_volume(pattern[1])
+            volume = self.__get_volume_gain(pattern[1])
             sound += volume
             # get the choosen notes
             notes = pattern[2:]
@@ -129,6 +131,7 @@ class MusicMaker(object):
         print(f'Exported a soundtrack with the lenght of {len(music)}ms')
         # play the new soundtrack via speaker
         # play(music)
+        return music
         
         
     def create_soundtrack(self, sound: AudioSegment, notes: list)->AudioSegment:
@@ -245,7 +248,7 @@ class MusicMaker(object):
         return self.delete_silence(sound)
         
     
-    def __get_volume(self, volume:str)->int:
+    def __get_volume_gain(self, volume:str)->int:
         """
         Converting the input 1,2,3 into the volume change in dB.
 
@@ -334,12 +337,12 @@ class MusicMaker(object):
         trim_position = 0  # ms
 
         assert iteration_size > 0  # to avoid infinite loop
-        while self.__isSilent(iteration_size, silence_threshold, sound, trim_position):
+        while self.__is_silent(iteration_size, silence_threshold, sound, trim_position):
             trim_position += iteration_size
         return trim_position
     
     
-    def __isSilent(self, iteration_size:int, silence_threshold:int, sound:AudioSegment, trim_position:int)->bool:
+    def __is_silent(self, iteration_size:int, silence_threshold:int, sound:AudioSegment, trim_position:int)->bool:
         """
         checks if the analysed audio segment part is silent (volume below limit) or not. 
 
@@ -369,9 +372,9 @@ class MusicMaker(object):
         Parameters
         ----------
         count : int
-            number of how many times the soundtrack shoulb be repeated
+            number of how many times the soundtrack should be repeated
         soundtrack : AudioSegment
-            soundtrack that should be reapeated
+            soundtrack that should be repeated
 
         Returns
         -------
@@ -407,12 +410,28 @@ def get_absolute_path(fileName:str)->str:
     return os.path.join(path, fileName)
 
 
+def visualize_sound(spect, frequencies, title=""):
+    # Visualize the result of calling seg.filter_bank() for any number of filters
+    i = 0
+    for freq, (index, row) in zip(frequencies[::-1], enumerate(spect[::-1, :])):
+        plt.subplot(spect.shape[0], 1, index + 1)
+        if i == 0:
+            plt.title(title)
+            i += 1
+        plt.ylabel("{0:.0f}".format(freq))
+        plt.plot(row)
+    plt.show()
+
+
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #
 
 if __name__ == '__main__':
     musicMaker = MusicMaker(FILENAME, bpm=120)
-    musicMaker.make_music()
+    music = musicMaker.create_music_file()
+    # for debugging
+    spec, frequencies = music.filter_bank(nfilters=5)
+    visualize_sound(spec, frequencies)
 
 
