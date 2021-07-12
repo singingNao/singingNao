@@ -22,6 +22,9 @@ Class for analysing the shape of a random number and position of found points.
 # standard:
 import numpy as np
 import math
+
+from numpy.core import numeric
+from numpy.core.defchararray import upper
 # local:
 import StraightLineEquation as sle
 # =========================================================================== #
@@ -31,10 +34,6 @@ import StraightLineEquation as sle
 MINIMAL_DISTANCE = 100
 # amount of red dots in one horizantal line 
 DOTS_IN_LINE = 6
-
-# =========================================================================== #
-#  SECTION: Function definitions
-# =========================================================================== #
 
 # =========================================================================== #
 #  SECTION: Class definitions
@@ -52,11 +51,11 @@ class Grid(object):
 
     def __init__(self, coordinates:dict):
         # dict of tuples with (x,y)
-        self.__coordiantes = coordinates
-        # totoal numer of found points
+        self.__coordiantes = self.__clustering(coordinates)
+        # total number of found points
         self.__knots = len(coordinates)
-        # calculate the distances from each point to each point
-        self.__distances = self.__calculate_distances()
+        # corners
+        self.corners = self.__sort_corners()
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Getter/Setter
@@ -69,7 +68,8 @@ class Grid(object):
         return self.__knots
 
     def set_coordinates(self, coordinates):
-        self.__coordiantes = coordinates
+        self.__coordiantes = self.__clustering(coordinates)
+        self.corners = self.__sort_corners()
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Public Methods
@@ -77,7 +77,6 @@ class Grid(object):
     def find_rectangles(self)->dict:
         """
         Find the corners of every rectangle on the game board.
-
         Returns
         -------
         dict
@@ -86,34 +85,11 @@ class Grid(object):
         # FIRST STEP:
         # Fill the matrix with all the found points in the correct order
         # each element represents one row on the game board
-        matrix = [[], [], []]
-        for i in range(3):
-            # start point
-            first_key = list(self.__coordiantes.keys())[0]
-            point1 = self.__coordiantes[first_key]
-            # find closest point and get the distance
-            point2, distance = self.__find_nearest_neighbour(first_key)
-            # defining a error range for y values 
-            yErr = distance * 0.2
-            # use point 1 and 2 to create a straight line equation
-            g = sle.StraightLineEquation(point1, point2)
-            # check which points are in line with point 1 and 2
-            pattern = g.check_points(self.__coordiantes, yErr)
-            # fill matching points into the matrix row and delete
-            # these for the next iteration
-            rest = dict()
-            for j, value in enumerate(pattern):
-                point = self.__coordiantes[first_key + j]
-                if value:
-                    matrix[i].append(point)
-                else:
-                    rest[first_key + j] = point
-            self.__coordiantes = rest
-            # delete or calculate single missing/double points
-            matrix[i] = self.__clean_row(matrix[i], g)
+        matrix = self.__calculate_missing_knots()
         # SECOND STEP:
         # Iterate through the (3x6) matrix to sort the points to 
         # corners of rectangles
+        
         rectangles = dict()
         for j in range(2):
             for i in range(DOTS_IN_LINE-1):
@@ -124,7 +100,6 @@ class Grid(object):
                 rectangle.append(matrix[j+1][i])
                 
                 rectangles[i+5*j] = rectangle
-
         return rectangles
         
         
@@ -141,6 +116,7 @@ class Grid(object):
         result = self.__coordiantes.values()
         data = list(result)
         return np.array(data)
+            
             
     def __calculate_angle(self, vec1, vec2):
         """calculate the angle between two sensors in degree
@@ -188,8 +164,8 @@ class Grid(object):
                     dist = np.linalg.norm(vector1-vector2)
                     D[i,j] = dist
         return D
-  
     
+     
     def __calculate_angles(self):
         """calculate the angle between every point and save it into a angle matrix A
 
@@ -215,120 +191,208 @@ class Grid(object):
                     angle = self.__calculate_angle(vector1, vector2)
                     A[i, j] = angle
         return A
- 
-            
-    def __find_nearest_neighbour(self,referencePointKey:tuple)->tuple:
+    
+    
+    def __clustering(self, coords: dict) -> dict:
         """
-        find nearest neighbour point of a reference point
+        Cluster the coordinates by the distance. Are two ore more coordinates
+        in a radial distance range of the given minimal distance there a forming
+        one cluster. 
+
         Parameters
         ----------
-        referencePointKey : tuple
-            (x,y)
+        coords : list
+            list of points
+
+        Returns
+        -------
+        dict
+            dict of four corner coordintates
+        """
+        coords = list(coords.values())
+        cluster = {1:[], 2: [], 3:[],4:[]}
+        new_coords = list()
+        for key in range(1,5):
+            for i, coord in enumerate(coords):
+                if i == 0:
+                    cluster[key].append(coord)
+                else:
+                    vector1 = np.asarray(cluster[key][0])
+                    vector2 = np.asarray(coord)
+                    dist = np.linalg.norm(vector1-vector2)
+                    if dist < MINIMAL_DISTANCE:
+                        cluster[key].append(coord)
+                    else:
+                        new_coords.append(coord)
+            coords=new_coords
+            new_coords = []
+            # calculating the mean of the x and the y value of all coordinates
+            # in one cluster. the result is one statistical center point
+            cluster[key] = self.__find_center(cluster[key])
+        return cluster
+            
+        
+    def __find_center(self, coords:list)->tuple:
+        """
+        calculating the mean of the x and y value for a list of tuple coordinates
+
+        Parameters
+        ----------
+        coords : list
+            list of tuple like coordinates
 
         Returns
         -------
         tuple
-            nearest neighbour (x,y) , distance between reference point and that neighbour
+            (mean x, mean y)
         """
-        D = self.__distances
-        row = D[referencePointKey]
-        hrow = self.__delete_not_horizotals(referencePointKey, row)
-        sorted_row = np.sort(hrow)
-        for value in sorted_row:
-            if value >= MINIMAL_DISTANCE:
-                minval = value
+        X = 0
+        Y = 0
+        n = len(coords)
+        for coord in coords:  
+            X += coord[0]
+            Y += coord[1]
+        
+        mean_X = round(X/n)
+        mean_Y = round(Y/n)
+        return (mean_X, mean_Y)
+            
+            
+    def __sort_corners(self)->dict:
+        """
+        find the corners from the "rectangular" shaped grid:
+        
+        A-------D\n
+        |       |\n
+        B-------C\n
+
+        Returns
+        -------
+        dict
+            4 corner coordinates
+        """
+        ###### 1.Step
+        # find corner C and A by summing up the y and y values and using the one with the
+        # biggest sum value for C and the lowest for A
+        max_sum_val = 0
+        min_sum_val = 0
+        coords = list(self.__coordiantes.values())
+        for coord in coords:
+            sum_value = coord[0] + coord[1]
+            if sum_value>max_sum_val:
+                max_sum_val=sum_value
+                min_sum_val=sum_value
+                C = coord
+            elif sum_value<min_sum_val:
+                min_sum_val=sum_value
+                A = coord
+        coords.remove(A)
+        coords.remove(C)
+        ###### 2.Step
+        # determine B and D
+        if check_inBetween(coords[0][0], A[0]+MINIMAL_DISTANCE, A[0]-MINIMAL_DISTANCE):
+            B = coords[0]
+            D = coords[1]
+        else:
+            D = coords[0]
+            B = coords[1]
+        return {'A':A,'B':B,'C':C,'D':D}
+  
+  
+    def __calculate_missing_knots(self)->np.array:
+        """
+        Calculating the missing knots out of the symmetrie
+        and the 4 corner coordinates.
+
+        Returns
+        -------
+        np.array
+            3x6 matrix with all coordinates
+        """
+        # convert the tuple coordinates into numpy arrays
+        vectorA = np.asarray(self.corners['A'])
+        vectorB = np.asarray(self.corners['B'])
+        vectorC = np.asarray(self.corners['C'])
+        vectorD = np.asarray(self.corners['D'])
+        # creating straight line equations out of the given symmetrie
+        upper_h = sle.StraightLineEquation(vectorD, vectorA)
+        lower_h = sle.StraightLineEquation(vectorC, vectorB)
+        left_v = sle.StraightLineEquation(vectorB, vectorA)
+        right_v = sle.StraightLineEquation(vectorC, vectorD)
+        middle_h = sle.StraightLineEquation(
+            right_v.calculate(1/2), left_v.calculate(1/2))
+        # calculating the missing coordinates and putting it into a matrix shape
+        # the rows in the matrix are correspond to the horizontal lines in the grid
+        coord_Matrix = [[],[],[]]
+        for i in range(5, -1, -1):
+            x1 = tuple(np.rint(upper_h.calculate(i/5)))
+            coord_Matrix[0].append(x1)
+            x2 = tuple(np.rint(middle_h.calculate(i/5)))
+            coord_Matrix[1].append(x2)
+            x3 = tuple(np.rint(lower_h.calculate(i/5)))
+            coord_Matrix[2].append(x3)
+        
+        return coord_Matrix
+# =========================================================================== #
+#  SECTION: Function definitions
+# =========================================================================== #
+def check_inBetween(value: float, upper: float = 0, lower:float=0)->bool:
+    """
+    check if the value is in a specified range
+    Parameters
+    ----------
+    value : float
+        value to ckeck
+    upper : float, optional
+        upper limit, by default 0
+    lower : float, optional
+        lower limit, by default 0
+    Returns
+    -------
+    bool
+        is the value in the range
+    """
+    return lower <= value and value <= upper
+ 
+
+def round_data(data, err=0, digits=-1) -> tuple:
+    """
+    round_data
+    Round the data by using DIN 1333. The position of the first segnificant␣
+    ,→digit of the error
+    is used as the the last segnificant digit of the data. If the first␣
+    ,→segnificant digit of the error
+    is a 1 or 2, one more digit is added.
+    Parameters
+    ----------
+    data : [float]
+    floating number with inaccuracy
+    err : [float, optional]
+    floating number of the data inaccuracy
+    Returns
+    digits : [int, optional]
+    if digits are set, the rounding is not made by DIN 1333
+    the numbers will be returned with the wanted number of digits
+    -------
+    [tuple of str]
+    [0] rounded data by DIN 1333
+    [1] rounded error by DIN 1333
+    """
+    if digits >= -1:
+        counter = 0
+        for number in str(err).replace('.', ''):
+            if number == '0':
+                counter += 1
+            elif number == '1' or number == '2':
+                counter += 1
                 break
-        index = np.argwhere(row == minval)[0][0]
-        return self.__coordiantes[index], minval
-        
-        
-    def __delete_not_horizotals(self, referencePointKey:tuple, row:list)->list:
-        """
-        set the distance of every point that is not "horizontal" to zero 
-
-        Parameters
-        ----------
-        referencePointKey : tuple
-            (x,y))
-        row : list
-            list of distances
-
-        Returns
-        -------
-        list
-            refreshed list of distances
-        """
-        yRef = self.__coordiantes[referencePointKey][1]
-        yMin = yRef-MINIMAL_DISTANCE
-        yMax = yRef+MINIMAL_DISTANCE
-        for key in self.__coordiantes:
-            value = self.__coordiantes[key]
-            y = value[1]
-            in_between = yMin <= y and y <= yMax
-            if not in_between:
-                row[key]=0
-        return row
-    
-    
-    def __delete_doubles(self, row:list)->list:
-        """
-        delete double recognized points by chekcing if a second one is close the it
-
-        Parameters
-        ----------
-        row : list
-            list of points in one horizontal line
-
-        Returns
-        -------
-        list
-            list of points in one horizontal line without doubles
-        """
-        cleaned_row = list()
-        upperX = 0
-        lowerX = 0
-        for coord in row:
-            x = coord[0]
-            in_between = lowerX <= x and x <= upperX
-            if not in_between:
-                cleaned_row.append(coord)   
-            upperX = x+ MINIMAL_DISTANCE
-            lowerX = x - MINIMAL_DISTANCE
-        return cleaned_row 
-            
-            
-    def __calculate_missing(self, row:list, g:sle):
-        #TODO calculate missing points by using the straight line equation
-        # and the known distances
-        
-        #check which one are missing
-        pass
-
-
-    def __clean_row(self, row: list, g: sle)->list:
-        """
-        be sure that the exact number of points are in line
-        Parameters
-        ----------
-        row : list
-            list of points in one line
-        g : sle
-            straight line equation that describes the position
-
-        Returns
-        -------
-        list
-            list of exact 6 equidistant points
-        """
-        #sort the coords descending by the x value
-        row.sort(reverse=True)
-        row = self.__delete_doubles(row)
-        if len(row) < DOTS_IN_LINE:
-            row = self.__calculate_missing(row, g)
-        elif len(row) == DOTS_IN_LINE:
-            return row
-        print("Something went wrong during the data cleaning")
-                
+            else:
+                break
+    else:
+        counter = digits
+    rounded_err = format(err, f'.{counter}f')
+    rounded_data = format(data, f'.{counter}f')
+    return rounded_data, rounded_err
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #

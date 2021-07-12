@@ -31,7 +31,7 @@ import ShapeAnalysis
 #  SECTION: Global definitions
 # =========================================================================== #
 # path of the taken photo of nao
-FILENAME = "Testbilder\photo_test6.jpg"
+FILENAME = "Testbilder/photo_test6_3.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -59,7 +59,7 @@ def read_image(fileName:str)->np.array:
     return cv2.imread(image_path)
 
 
-def find_red_dots(img:np.array)->dict:
+def find_red_dots(img:np.array, debug=True)->dict:
     """finding red dots on an image
 
     Parameters
@@ -104,7 +104,12 @@ def find_red_dots(img:np.array)->dict:
             img = cv2.circle(img, center, radius, (0, 255, 0), 10)
             cv2.circle(img, center, radius, (0, 255, 0), 10)
             x, y, w, h = cv2.boundingRect(c)
-            
+    if debug:
+        debug = img.copy()
+        debug = cv2.resize(debug, (750, 500))
+        cv2.imshow('test', debug)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     return points
 
 
@@ -153,7 +158,7 @@ def find_paper(img: np.array) -> np.array:
     return result
  
  
-def cut_rectangles(img:np.array, edges:list, count:int, debug=True):
+def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
     """
     cut out the single rectangles and save them into new images
 
@@ -169,12 +174,12 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=True):
         if True saves image where the found rectangle boarders are marked, by default False
     """
     original_image_copy = img.copy()
-    pts = np.array(edges)
+    pts = np.array(edges).astype(np.int)
     ## (1) Crop the bounding rect
     rect = cv2.boundingRect(pts)
     x, y, w, h = rect
     croped = original_image_copy[y:y+h, x:x+w]
-
+    
     ## (2) make mask
     pts2 = pts - pts.min(axis=0)
     mask = np.zeros(croped.shape[:2], np.uint8)
@@ -186,6 +191,7 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=True):
     ## (4) save images
     path = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(path, "cutouts/roi")
+    
     cv2.imwrite(image_path+str(count)+".jpg", dst)
     
     if debug:
@@ -196,7 +202,68 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=True):
         thickness = 2
         image = cv2.polylines(img.copy(), [pts], True, color, 8)
         cv2.imwrite(image_path + str(count)+".jpg", image)
+        cv2.imshow('test',image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
+    size = dst.shape
+    area = size[0]*size[1]
+    return area
+
+def warp_perspektive(img:np.array, corners:list)->np.array:
+    """
+    warpes the perspective of the image with the information of the 
+    red dot corners (needs corners to function!!!)
+
+    Parameters
+    ----------
+    img : np.array
+        image to warp
+    corners : list
+        list of the corner coordinates
+
+    Returns
+    -------
+    np.array
+        warped image
+    """
+    
+    #TODO questionable coordinate order
+    pt_A = corners['D']
+    pt_B = corners['A']
+    pt_C = corners['B']
+    pt_D = corners['C']
+    
+    # L2 norm
+    width_AD = np.sqrt(((pt_A[0] - pt_D[0]) ** 2) + ((pt_A[1] - pt_D[1]) ** 2))
+    width_BC = np.sqrt(((pt_B[0] - pt_C[0]) ** 2) + ((pt_B[1] - pt_C[1]) ** 2))
+    maxWidth = max(int(width_AD), int(width_BC))
+
+    height_AB = np.sqrt(((pt_A[0] - pt_B[0]) ** 2) + ((pt_A[1] - pt_B[1]) ** 2))
+    height_CD = np.sqrt(((pt_C[0] - pt_D[0]) ** 2) + ((pt_C[1] - pt_D[1]) ** 2))
+    maxHeight = max(int(height_AB), int(height_CD))
+        
+    input_pts = np.float32([pt_A, pt_B, pt_C, pt_D])
+
+    output_pts = np.float32([[10, 10],
+                             [10, maxHeight - 10],  
+                             [maxWidth - 10, maxHeight - 10],
+                             [maxWidth - 10, 10]])
+    # Compute the perspective transform M
+    M = cv2.getPerspectiveTransform(input_pts, output_pts)
+    img_copy = np.copy(img)
+    out = cv2.warpPerspective(
+        img_copy, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
+    return cv2.resize(out, (1500, 1000))
+
+def check_cutouts(sizes:list()):
+    #TODO define consequence, wenn std above 10%
+    np_sizes = np.array(sizes)
+    mean = np.mean(np_sizes)
+    std = ShapeAnalysis.round_data(data=np.std(np_sizes)/mean*100,digits =2)[0]
+    print(f"The cutouts have a standard deviation of {std} %")
+    if int(std)>=10:
+        pass
         
 def seperate_the_objects(fileName:str):
     """
@@ -210,17 +277,29 @@ def seperate_the_objects(fileName:str):
     begin = time.time()
     #Read in image and rezize
     img = read_image(fileName)
+    #warp_perspektive(img)
     try:
         img = cv2.resize(img, (1500, 1000))
-        #Find paper and resize
+        # Find paper and resize
         paper = find_paper(img)
-        #Find red dots
+        # Find red dots
         points = find_red_dots(paper)
-
         Shape = ShapeAnalysis.Grid(points)
+        #quit()
+        # warp the perspektive
+        warped = warp_perspektive(img, Shape.corners)
+        points = find_red_dots(warped)
+        # find the new coordinates out of the warped photov
+        new_points = find_red_dots(warped)
+        Shape.set_coordinates(new_points)
+        # find rectangles
         rectangles = Shape.find_rectangles()
+        sizes = list()
         for key in rectangles:
-            cut_rectangles(img, rectangles[key], key)
+            sizes.append(cut_rectangles(warped, rectangles[key], key))
+        
+        check_cutouts(sizes)
+            
     except Exception as e:
         print('error:')
         print(str(e))

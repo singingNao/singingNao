@@ -37,26 +37,27 @@ import numpy as np
 
 
 class StraightLineEquation(object):
-    counter : int = 0
+    counter : int = 1
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
 
-    def __init__(self, a:tuple, b:tuple):
+    def __init__(self, a: np.array, b: np.array):
         """
         create new straight line equation out of two points (2D-vectors) 
         Parameters
         ----------
-        a : tuple
+        a : numpy array
             start point (x,y)
-        b : tuple
+        b : numpy array
             end point (x,y)
         """
-        # change start point into support vector (type numpy array)
-        self.__supportVector = np.asarray(a)
-        # calculate direction vector via b - a (type numpy array)
-        self.__directionVector = np.asarray(b)-np.asarray(a)
+        # start point is the new support vector
+        self.__supportVector = a
+        # calculate direction vector via b - a 
+        self.__directionVector = b-a
         # increment the instance counter
+        self.counter = StraightLineEquation.counter
         StraightLineEquation.counter +=1
         
         
@@ -71,7 +72,7 @@ class StraightLineEquation(object):
     
 
     def get_equation(self):
-        print("New equation: g{0}: x(t)={1}t+{2}".format(StraightLineEquation.counter,
+        print("New equation: g{0}: x(t)={1}t+{2}".format(self.counter,
                                                          self.__directionVector, 
                                                          self.__supportVector))
     # ----------------------------------------------------------------------- #
@@ -110,23 +111,21 @@ class StraightLineEquation(object):
                 listOfTruth.append(False)
         return listOfTruth
                 
-    def calculation(self, t: float, a: np.array, b: np.array) -> np.array:
+    def calculate(self, t: float) -> np.array:
         """
         calculate a new point by using the straight line equation
         Parameters
         ----------
         t : float
             variable to shift into the direction of the directional vector
-        a : np.array
-            support vector
-        b : np.array
-            directional vector
 
         Returns
         -------
         np.array
             calculated point on the line
         """
+        a = self.__directionVector
+        b = self.__supportVector
         return a*t+b
 
     def calculate_t(self, x_value:float, a:np.array, b:np.array)->float:
@@ -150,6 +149,37 @@ class StraightLineEquation(object):
             to the giving x value
         """
         return (x_value - b[0])/a[0]
+    
+    def calculate_coord_in_distance(self, refCoord:np.array, d:float)->np.array:
+        """
+        Calculate the coordiantes in a given distance from a reference point.
+        the new coordinates are still on the straight line equation. 
+
+        Parameters
+        ----------
+        refCoord : np.array
+            reference point
+        d : float
+            distance from the reference point
+
+        Returns
+        -------
+        np.array
+            new coordinates
+        """
+        a1, a2 = self.__seperate_2Dvector(self.__directionVector)
+        b1, b2 = self.__seperate_2Dvector(self.__supportVector)
+        x, y = self.__seperate_2Dvector(refCoord)
+        # calculate the single constants c
+        c1 = a1**2 + a2**2
+        c2 = (a1*(x-b1)+a2*(y-b2)) / c1
+        c3 =  ((b1-x)**2 + (b2-y)**2 - d**2) / c1
+        c4 = c2**2 - c3
+        # calculate t from the pq-formula
+        t = c2 + np.sqrt(c4)
+        # calculate the new coordinates out of the calculated t
+        return self.calculation(t, self.__directionVector, self.__supportVector)
+        
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Private Methods
@@ -210,6 +240,9 @@ class StraightLineEquation(object):
             tMin, self.__directionVector, lower_supportVector)[1]
         return yMin, yMax
 
+    def __seperate_2Dvector(self, vector:np.array)->tuple:
+        return vector.item(0), vector.item(1)
+        
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #
