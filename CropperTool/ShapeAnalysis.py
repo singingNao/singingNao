@@ -49,7 +49,7 @@ class Grid(object):
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
 
-    def __init__(self, coordinates:dict):
+    def __init__(self, coordinates):
         # dict of tuples with (x,y)
         self.__coordiantes = self.__clustering(coordinates)
         # total number of found points
@@ -74,7 +74,7 @@ class Grid(object):
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Public Methods
     # ----------------------------------------------------------------------- #
-    def find_rectangles(self)->dict:
+    def find_rectangles(self):
         """
         Find the corners of every rectangle on the game board.
         Returns
@@ -193,7 +193,7 @@ class Grid(object):
         return A
     
     
-    def __clustering(self, coords: dict) -> dict:
+    def __clustering(self, coords):
         """
         Cluster the coordinates by the distance. Are two ore more coordinates
         in a radial distance range of the given minimal distance there a forming
@@ -232,7 +232,7 @@ class Grid(object):
         return cluster
             
         
-    def __find_center(self, coords:list)->tuple:
+    def __find_center(self, coords):
         """
         calculating the mean of the x and y value for a list of tuple coordinates
 
@@ -258,7 +258,7 @@ class Grid(object):
         return (mean_X, mean_Y)
             
             
-    def __sort_corners(self)->dict:
+    def __sort_corners(self):
         """
         find the corners from the "rectangular" shaped grid:
         
@@ -299,7 +299,7 @@ class Grid(object):
         return {'A':A,'B':B,'C':C,'D':D}
   
   
-    def __calculate_missing_knots(self)->np.array:
+    def __calculate_missing_knots(self):
         """
         Calculating the missing knots out of the symmetrie
         and the 4 corner coordinates.
@@ -336,7 +336,7 @@ class Grid(object):
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
-def check_inBetween(value: float, upper: float = 0, lower:float=0)->bool:
+def check_inBetween(value, upper = 0, lower = 0):
     """
     check if the value is in a specified range
     Parameters
@@ -355,7 +355,7 @@ def check_inBetween(value: float, upper: float = 0, lower:float=0)->bool:
     return lower <= value and value <= upper
  
 
-def round_data(data, err=0, digits=-1) -> tuple:
+def round_data(data, err=0, digits=-1):
     """
     round_data
     Round the data by using DIN 1333. The position of the first segnificant␣
@@ -390,8 +390,8 @@ def round_data(data, err=0, digits=-1) -> tuple:
                 break
     else:
         counter = digits
-    rounded_err = format(err, f'.{counter}f')
-    rounded_data = format(data, f'.{counter}f')
+    rounded_err = round(err, counter)
+    rounded_data = round(data, counter)
     return rounded_data, rounded_err
 # =========================================================================== #
 #  SECTION: Main Body                                                         

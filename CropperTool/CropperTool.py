@@ -31,7 +31,7 @@ import ShapeAnalysis
 #  SECTION: Global definitions
 # =========================================================================== #
 # path of the taken photo of nao
-FILENAME = "Testbilder/photo_test6_3.jpg"
+FILENAME = "Testbilder/image1.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -40,7 +40,7 @@ UPPER_RED= np.array([180, 255, 255])
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
-def read_image(fileName:str)->np.array:
+def read_image(fileName):
     """read in the the image file to work with it in the scipt
 
     Parameters
@@ -59,7 +59,7 @@ def read_image(fileName:str)->np.array:
     return cv2.imread(image_path)
 
 
-def find_red_dots(img:np.array, debug=True)->dict:
+def find_red_dots(img, debug=True):
     """finding red dots on an image
 
     Parameters
@@ -113,7 +113,7 @@ def find_red_dots(img:np.array, debug=True)->dict:
     return points
 
 
-def find_paper(img: np.array) -> np.array:
+def find_paper(img):
     """
     finding the paper/game board in the image and cropping the unecessary stuff
 
@@ -158,7 +158,7 @@ def find_paper(img: np.array) -> np.array:
     return result
  
  
-def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
+def cut_rectangles(img, edges, count, debug=False):
     """
     cut out the single rectangles and save them into new images
 
@@ -210,7 +210,7 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
     area = size[0]*size[1]
     return area
 
-def warp_perspektive(img:np.array, corners:list)->np.array:
+def warp_perspektive(img, corners):
     """
     warpes the perspective of the image with the information of the 
     red dot corners (needs corners to function!!!)
@@ -256,16 +256,15 @@ def warp_perspektive(img:np.array, corners:list)->np.array:
         img_copy, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
     return cv2.resize(out, (1500, 1000))
 
-def check_cutouts(sizes:list()):
+def check_cutouts(sizes):
     #TODO define consequence, wenn std above 10%
     np_sizes = np.array(sizes)
     mean = np.mean(np_sizes)
     std = ShapeAnalysis.round_data(data=np.std(np_sizes)/mean*100,digits =2)[0]
-    print(f"The cutouts have a standard deviation of {std} %")
     if int(std)>=10:
         pass
         
-def seperate_the_objects(fileName:str):
+def seperate_the_objects(fileName):
     """
     seperates the rectangle shapes from the game board image
 
@@ -311,4 +310,3 @@ def seperate_the_objects(fileName:str):
 
 if __name__ == '__main__':
     seperate_the_objects(FILENAME)
-    
