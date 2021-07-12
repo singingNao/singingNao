@@ -90,7 +90,7 @@ def find_red_dots(img, debug=True):
     #find the position of the contours
     contours, hierarchy = cv2.findContours(
         thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[-2:]
-    
+
     count = 0
     points = dict()
     for c in contours:
@@ -107,9 +107,9 @@ def find_red_dots(img, debug=True):
     if debug:
         debug = img.copy()
         debug = cv2.resize(debug, (750, 500))
-        #cv2.imshow('test', debug)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
+        # cv2.imshow('test', debug)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
     return points
 
 
@@ -137,8 +137,7 @@ def find_paper(img):
     kernel = np.ones((9, 9), np.uint8)
     morph = cv2.morphologyEx(morph, cv2.MORPH_ERODE, kernel)
     # get largest contour
-    contours = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    contours = contours[0] if len(contours) == 2 else contours[1]
+    contours, _ = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2:]
     area_thresh = 0
     for c in contours:
         area = cv2.contourArea(c)
@@ -178,15 +177,15 @@ def cut_rectangles(img, edges, count, debug=True):
     ## (1) Crop the bounding rect
     rect = cv2.boundingRect(pts)
     x, y, w, h = rect
-    croped = original_image_copy[y:y+h, x:x+w]
+    cropped = original_image_copy[y:y+h, x:x+w]
     
     ## (2) make mask
     pts2 = pts - pts.min(axis=0)
-    mask = np.zeros(croped.shape[:2], np.uint8)
+    mask = np.zeros(cropped.shape[:2], np.uint8)
     cv2.drawContours(mask, [pts2], -1, (255, 255, 255), -1, cv2.LINE_AA)
     
     ## (3) do bit-op
-    dst = cv2.bitwise_and(croped, croped, mask=mask)
+    dst = cv2.bitwise_and(cropped, cropped, mask=mask)
     
     ## (4) save images
     path = os.path.dirname(os.path.abspath(__file__))
@@ -202,9 +201,9 @@ def cut_rectangles(img, edges, count, debug=True):
         thickness = 2
         image = cv2.polylines(img.copy(), [pts], True, color, 8)
         cv2.imwrite(image_path + str(count)+".jpg", image)
-        #cv2.imshow('test',image)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
+        cv2.imshow('test',image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     size = dst.shape
     area = size[0]*size[1]
@@ -287,8 +286,7 @@ def seperate_the_objects(fileName):
         #quit()
         # warp the perspektive
         warped = warp_perspektive(img, Shape.corners)
-        points = find_red_dots(warped)
-        # find the new coordinates out of the warped photov
+        # find the new coordinates out of the warped photo
         new_points = find_red_dots(warped)
         Shape.set_coordinates(new_points)
         # find rectangles
