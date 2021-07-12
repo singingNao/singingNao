@@ -41,7 +41,7 @@ UPPER_RED= np.array([180, 255, 255])
 #  SECTION: Function definitions
 # =========================================================================== #
 def read_image(fileName):
-    """read in the the image file to work with it in the scipt
+    """read in the the image file to work with it in the script
 
     Parameters
     ----------
@@ -89,7 +89,7 @@ def find_red_dots(img, debug=True):
     
     #find the position of the contours
     contours, hierarchy = cv2.findContours(
-        thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[-2:]
     
     count = 0
     points = dict()
@@ -107,9 +107,9 @@ def find_red_dots(img, debug=True):
     if debug:
         debug = img.copy()
         debug = cv2.resize(debug, (750, 500))
-        cv2.imshow('test', debug)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.imshow('test', debug)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
     return points
 
 
@@ -158,7 +158,7 @@ def find_paper(img):
     return result
  
  
-def cut_rectangles(img, edges, count, debug=False):
+def cut_rectangles(img, edges, count, debug=True):
     """
     cut out the single rectangles and save them into new images
 
@@ -202,9 +202,9 @@ def cut_rectangles(img, edges, count, debug=False):
         thickness = 2
         image = cv2.polylines(img.copy(), [pts], True, color, 8)
         cv2.imwrite(image_path + str(count)+".jpg", image)
-        cv2.imshow('test',image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.imshow('test',image)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
 
     size = dst.shape
     area = size[0]*size[1]
