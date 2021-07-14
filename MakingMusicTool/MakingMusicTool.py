@@ -101,7 +101,6 @@ class MusicMaker(object):
             for i,row in enumerate(reader):
                 # delete all empty strings
                 row = [x for x in row if x]
-                print(row)
                 if self.__are_notes_valid(row[2:]):
                     # add to dict
                     sound_pattern["sound"+str(i)] = row
@@ -433,7 +432,7 @@ if __name__ == '__main__':
     musicMaker = MusicMaker(FILENAME, bpm=120)
     music = musicMaker.create_music_file()
     # for debugging
-    spec, frequencies = music.filter_bank(nfilters=5)
-    visualize_sound(spec, frequencies)
+    #spec, frequencies = music.filter_bank(nfilters=5)
+    #visualize_sound(spec, frequencies)
 
 
