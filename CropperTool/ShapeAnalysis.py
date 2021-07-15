@@ -4,6 +4,7 @@
 # @Author  : Tom Brandherm (s_brandherm19@stud.hwr-berlin.de)
 # @Link    : link
 # @Version : 1.0.0
+# @Python  : 2.7.0
 """
 Class for analysing the shape of a random number and position of found points.
 """
@@ -20,11 +21,15 @@ Class for analysing the shape of a random number and position of found points.
 #  SECTION: Imports                                                           
 # =========================================================================== #
 # standard:
+# get float division for python 2.7
+from __future__ import division
+
 import numpy as np
 import math
 
 from numpy.core import numeric
 from numpy.core.defchararray import upper
+
 # local:
 import StraightLineEquation as sle
 # =========================================================================== #
@@ -210,28 +215,40 @@ class Grid(object):
             dict of four corner coordintates
         """
         coords = list(coords.values())
-        cluster = {1:[], 2: [], 3:[],4:[]}
+        cluster = dict()
         new_coords = list()
-        for key in range(1,5):
+        key_counter = 0
+        while coords:
+            key_counter += 1
+            cluster[key_counter] = list()
             for i, coord in enumerate(coords):
                 if i == 0:
-                    cluster[key].append(coord)
+                    cluster[key_counter].append(coord)
                 else:
-                    vector1 = np.asarray(cluster[key][0])
+                    vector1 = np.asarray(cluster[key_counter][0])
                     vector2 = np.asarray(coord)
                     dist = np.linalg.norm(vector1-vector2)
                     if dist < MINIMAL_DISTANCE:
-                        cluster[key].append(coord)
+                        cluster[key_counter].append(coord)
                     else:
                         new_coords.append(coord)
             coords=new_coords
             new_coords = []
             # calculating the mean of the x and the y value of all coordinates
             # in one cluster. the result is one statistical center point
-            cluster[key] = self.__find_center(cluster[key])
+            cluster[key_counter] = self.__find_center(cluster[key_counter])
+        cluster = self.__delete_wrong_detected_cluster(cluster)
+        return cluster
+    
+    
+    def __delete_wrong_detected_cluster(self, cluster):
+        if len(cluster) > 4:
+            rm_keys = cluster.keys()[2:-2]
+            for key in rm_keys:
+                del cluster[key]
         return cluster
             
-        
+    
     def __find_center(self, coords):
         """
         calculating the mean of the x and y value for a list of tuple coordinates
@@ -271,12 +288,17 @@ class Grid(object):
         dict
             4 corner coordinates
         """
+        ###### 0.Step
+        # check via the x value which red dot was recognized at first
+        # resort the values
+        self.__sort_coordiantes()
         ###### 1.Step
         # find corner C and A by summing up the y and y values and using the one with the
         # biggest sum value for C and the lowest for A
         max_sum_val = 0
         min_sum_val = 0
         coords = list(self.__coordiantes.values())
+        
         for coord in coords:
             sum_value = coord[0] + coord[1]
             if sum_value>max_sum_val:
@@ -298,6 +320,21 @@ class Grid(object):
             B = coords[1]
         return {'A':A,'B':B,'C':C,'D':D}
   
+  
+    def __sort_coordiantes(self):
+        print(self.__coordiantes)
+        keys = self.__coordiantes.keys()
+        p1 = self.__coordiantes[keys[0]]
+        p2 = self.__coordiantes[keys[1]]
+        p3 = self.__coordiantes[keys[2]]
+        p4 = self.__coordiantes[keys[3]]
+        if p1[0] < p2[0]:
+            self.__coordiantes[keys[0]] = p2
+            self.__coordiantes[keys[1]] = p1
+        if p3[0] < p4[0]:
+            self.__coordiantes[keys[2]] = p4
+            self.__coordiantes[keys[3]] = p3
+        print(self.__coordiantes)
   
     def __calculate_missing_knots(self):
         """

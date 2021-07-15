@@ -4,8 +4,9 @@
 # @Author  : Tom Brandherm (s_brandherm19@stud.hwr-berlin.de)
 # @Link    : link
 # @Version : 1.0.0
+# @Python  : 2.7.0
 """
-tool for cropping a game board of rectangular shapes into single images
+Tool for cropping a game board of rectangular shapes into single images
 """
 # =========================================================================== #
 #  Copyright 2021 Team Awesome
@@ -20,6 +21,9 @@ tool for cropping a game board of rectangular shapes into single images
 #  SECTION: Imports                                                           
 # =========================================================================== #
 # standard:
+# get float division for python 2.7
+from __future__ import division 
+
 import cv2
 import numpy as np
 import time
@@ -31,7 +35,7 @@ import ShapeAnalysis
 #  SECTION: Global definitions
 # =========================================================================== #
 # path of the taken photo of nao
-FILENAME = "Testbilder/image1.jpg"
+FILENAME = "Testbilder/NaoImages/musicNotes2.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -107,9 +111,9 @@ def find_red_dots(img, debug=True):
     if debug:
         debug = img.copy()
         debug = cv2.resize(debug, (750, 500))
-        # cv2.imshow('test', debug)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        cv2.imshow('test', debug)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     return points
 
 
@@ -228,10 +232,10 @@ def warp_perspektive(img, corners):
     """
     
     #TODO questionable coordinate order
-    pt_A = corners['D']
-    pt_B = corners['A']
-    pt_C = corners['B']
-    pt_D = corners['C']
+    pt_A = corners['A']  # corners['D']
+    pt_B = corners['D']  # corners['A']
+    pt_C = corners['C']  # corners['B']
+    pt_D = corners['B']  # corners['C']
     
     # L2 norm
     width_AD = np.sqrt(((pt_A[0] - pt_D[0]) ** 2) + ((pt_A[1] - pt_D[1]) ** 2))

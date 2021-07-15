@@ -4,6 +4,7 @@
 # @Author  : Tom Brandherm (tom.brandherm@msasafety.com)
 # @Link    : link
 # @Version : 1.0.0
+# @Python  : 2.7.0
 """
 Straight line equation in two dimensional context: vec(f)(t)=vec(a)*t+vec(b) 
 """
@@ -19,6 +20,8 @@ Straight line equation in two dimensional context: vec(f)(t)=vec(a)*t+vec(b)
 # =========================================================================== #
 #  SECTION: Imports                                                           
 # =========================================================================== #
+# get float division for python 2.7
+from __future__ import division
 
 import math
 import numpy as np
@@ -148,7 +151,7 @@ class StraightLineEquation(object):
             variable t the shifts the directional vector from the support vector
             to the giving x value
         """
-        return (x_value - b[0])/a[0]
+        return float(x_value - b[0])/float(a[0])
     
     def calculate_coord_in_distance(self, refCoord, d):
         """
@@ -172,8 +175,8 @@ class StraightLineEquation(object):
         x, y = self.__seperate_2Dvector(refCoord)
         # calculate the single constants c
         c1 = a1**2 + a2**2
-        c2 = (a1*(x-b1)+a2*(y-b2)) / c1
-        c3 =  ((b1-x)**2 + (b2-y)**2 - d**2) / c1
+        c2 = float(a1*(x-b1)+a2*(y-b2)) / float(c1)
+        c3 =  float((b1-x)**2 + (b2-y)**2 - d**2) / float(c1)
         c4 = c2**2 - c3
         # calculate t from the pq-formula
         t = c2 + np.sqrt(c4)
@@ -199,8 +202,8 @@ class StraightLineEquation(object):
         float
             angle between straight line equation and the x axis in degree
         """
-        dX = b[0]-a[0]
-        dY = b[1]-a[1]
+        dX = float(b[0]-a[0])
+        dY = float(b[1]-a[1])
         angle_in_radians = math.atan(dY/dX)      
         angle_in_degrees = math.degrees(angle_in_radians)
         return angle_in_degrees
