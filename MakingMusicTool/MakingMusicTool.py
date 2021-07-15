@@ -225,12 +225,7 @@ class MusicMaker(object):
             return True
         return False
 
-<<<<<<< HEAD
-
-    def __get_instrument_sound(self, instrument: str) -> AudioSegment:
-=======
     def __get_instrument_sound(self, instrument):
->>>>>>> 90a4314c5de1848faf581af3c0aa86de111bc9d2
         """
         Choose the instrument out of the user input pattern and returning the
         associated audio segment.
@@ -415,35 +410,8 @@ def get_absolute_path(fileName):
     path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(path, fileName)
 
-
-def visualize_sound(sound:AudioSegment, title:str="", filters:int=5):
-    """
-    Visualizes the sound by analysing the frequencies and the spectrum
-
-    Parameters
-    ----------
-    sound : AudioSegment
-        sound to visualize
-    title : str, optional
-        title of the chart, by default ""
-    filters : int, optional
-        amound of filters, by default 5
-    """
-    samples = sound.get_array_of_samples()
-    samples = np.array(samples)
-    print(samples)
-    """spectrum, frequencies = sound.filter_bank(nfilters=filters)
-    i = 0
-    for freq, (index, row) in zip(frequencies[::-1], enumerate(spectrum[::-1, :])):
-        plt.subplot(spectrum.shape[0], 1, index + 1)
-        if i == 0:
-            plt.title(title)
-            i += 1
-        plt.ylabel("{0:.0f}".format(freq))
-        plt.plot(row)
-    plt.show()"""
-    
-def pydub_to_np(audio: AudioSegment) -> tuple:
+  
+def pydub_to_np(audio):
     """Converts pydub audio segment into float32 np array of shape [channels, duration_in_seconds*sample_rate],
     where each value is in range [-1.0, 1.0]. Returns tuple (audio_np_array, sample_rate)"""
     # get_array_of_samples returns the data in format:
@@ -459,18 +427,6 @@ def pydub_to_np(audio: AudioSegment) -> tuple:
 if __name__ == '__main__':
     musicMaker = MusicMaker(FILENAME, bpm=120)
     music = musicMaker.create_music_file()
-    # for debugging
-<<<<<<< HEAD
-    #visualize_sound(music)
-    print('lets see')
-    samples = pydub_to_np(music)[0]
-    print(samples)
-    print(f'{samples[0].shape=}')
-    plt.plot(samples[1])
-    plt.show()
-=======
-    #spec, frequencies = music.filter_bank(nfilters=5)
-    #visualize_sound(spec, frequencies)
->>>>>>> 90a4314c5de1848faf581af3c0aa86de111bc9d2
+    
 
 
