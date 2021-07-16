@@ -24,6 +24,7 @@ Tool for cropping a game board of rectangular shapes into single images
 # get float division for python 2.7
 from __future__ import division 
 
+import argparse
 import cv2
 import numpy as np
 import time
@@ -35,7 +36,10 @@ import ShapeAnalysis
 #  SECTION: Global definitions
 # =========================================================================== #
 # path of the taken photo of nao
-FILENAME = "Testbilder/NaoImages/musicNotes2.jpg"
+# FILENAME = "Testbilder/NaoImages/board4.jpg"
+FILENAME = "C:\Users\omare_h3adiuf\Desktop\music_cards_backup.jpg"
+# FILENAME = "C:\Users\omare_h3adiuf\Desktop\image.jpg"
+# FILENAME = "/data/home/nao/recordings/cameras/image.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -63,7 +67,7 @@ def read_image(fileName):
     return cv2.imread(image_path)
 
 
-def find_red_dots(img, debug=True):
+def find_red_dots(img, debug=False):
     """finding red dots on an image
 
     Parameters
@@ -79,8 +83,8 @@ def find_red_dots(img, debug=True):
         value: coordinate of the red dot [numpy array]
     """
     #Read in image and resize
-    img = cv2.resize(img, (1500, 1000))
-    
+    # img = cv2.resize(img, (1500, 1000))
+
     #convert image from BGR into HSV color space (the red color is here bright)
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     
@@ -99,7 +103,7 @@ def find_red_dots(img, debug=True):
     points = dict()
     for c in contours:
         area = cv2.contourArea(c)
-        if area > 1 and area < 250:
+        if area > 1 and area < 500:
             (x, y), radius = cv2.minEnclosingCircle(c)
             center = (int(x), int(y))
             points[count] = center
@@ -161,7 +165,7 @@ def find_paper(img):
     return result
  
  
-def cut_rectangles(img, edges, count, debug=True):
+def cut_rectangles(img, edges, count, debug=False):
     """
     cut out the single rectangles and save them into new images
 
@@ -194,7 +198,8 @@ def cut_rectangles(img, edges, count, debug=True):
     ## (4) save images
     path = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(path, "cutouts/roi")
-    
+    dst = cv2.resize(dst, (300, 500
+                           ))
     cv2.imwrite(image_path+str(count)+".jpg", dst)
     
     if debug:
@@ -213,7 +218,7 @@ def cut_rectangles(img, edges, count, debug=True):
     area = size[0]*size[1]
     return area
 
-def warp_perspektive(img, corners):
+def warp_perspektive(img, corners, debug= False):
     """
     warpes the perspective of the image with the information of the 
     red dot corners (needs corners to function!!!)
@@ -230,12 +235,10 @@ def warp_perspektive(img, corners):
     np.array
         warped image
     """
-    
-    #TODO questionable coordinate order
-    pt_A = corners['A']  # corners['D']
-    pt_B = corners['D']  # corners['A']
-    pt_C = corners['C']  # corners['B']
-    pt_D = corners['B']  # corners['C']
+    pt_A = corners['A']
+    pt_B = corners['B']
+    pt_C = corners['C']
+    pt_D = corners['D']
     
     # L2 norm
     width_AD = np.sqrt(((pt_A[0] - pt_D[0]) ** 2) + ((pt_A[1] - pt_D[1]) ** 2))
@@ -254,10 +257,19 @@ def warp_perspektive(img, corners):
                              [maxWidth - 10, 10]])
     # Compute the perspective transform M
     M = cv2.getPerspectiveTransform(input_pts, output_pts)
+    new_pt_A = transformePoints(pt_A, M)
+    new_pt_B = transformePoints(pt_B, M)
+    new_pt_C = transformePoints(pt_C, M)
+    new_pt_D = transformePoints(pt_D, M)
+    new_points={1:new_pt_C, 2:new_pt_B, 3:new_pt_D, 4:new_pt_A}
     img_copy = np.copy(img)
     out = cv2.warpPerspective(
         img_copy, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
-    return cv2.resize(out, (1500, 1000))
+    if debug:
+        cv2.imshow("test", out)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    return out , new_points
 
 def check_cutouts(sizes):
     #TODO define consequence, wenn std above 10%
@@ -287,11 +299,9 @@ def seperate_the_objects(fileName):
         # Find red dots
         points = find_red_dots(paper)
         Shape = ShapeAnalysis.Grid(points)
-        #quit()
+
         # warp the perspektive
-        warped = warp_perspektive(img, Shape.corners)
-        # find the new coordinates out of the warped photo
-        new_points = find_red_dots(warped)
+        warped, new_points = warp_perspektive(img, Shape.corners)
         Shape.set_coordinates(new_points)
         # find rectangles
         rectangles = Shape.find_rectangles()
@@ -305,10 +315,22 @@ def seperate_the_objects(fileName):
         print('error:')
         print(str(e))
     print(float(time.time()-begin))
-    
+
+def transformePoints(p, matrix):
+    px = float(matrix[0][0] * p[0] + matrix[0][1] * p[1] + matrix[0][2]) / \
+         float((matrix[2][0] * p[0] + matrix[2][1] * p[1] + matrix[2][2]))
+    py = float(matrix[1][0] * p[0] + matrix[1][1] * p[1] + matrix[1][2]) / \
+         float((matrix[2][0] * p[0] + matrix[2][1] * p[1] + matrix[2][2]))
+    return (int(px), int(py))
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #
 
 if __name__ == '__main__':
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument(
+    #     'path', help='path to made image from nao')
+    # args = parser.parse_args()
+    # if args.path:
+    #     FILENAME = args.path
     seperate_the_objects(FILENAME)
