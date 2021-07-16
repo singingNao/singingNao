@@ -2,8 +2,8 @@ from naoqi import ALModule
 from naoqi import ALProxy
 from naoqi import ALBroker
 
-IP = "127.0.0.1"
-PORT = 9559
+PIP = "127.0.0.1"
+PPORT = 9559
 # def startProcess():
 #
 #     # Speak
@@ -33,7 +33,7 @@ class CropperToolModule(ALModule):
         self.name = name
 
 
-    def exit(self):
+    #def exit(self):
 
 
     def croppImage(filename):
@@ -41,9 +41,8 @@ class CropperToolModule(ALModule):
         tool = CropperTool.CropoerTool()
         tool.seperate_the_objects(filename)
 
-
 if __name__ == '__main__':
 
-    myBroker = ALBroker("myBroker", "0.0.0.0", IP, PORT)
+    myBroker = ALBroker("myBroker", "0.0.0.0", PIP, PPORT)
     global CropperTool
-    CropperTool = CropperToolModule("CropperTool")
+    cropperTool = CropperToolModule("CropperTool")
