@@ -3,22 +3,25 @@
 # @Date    : 2021-04-14 14:57:35
 # @Author  : Tom Brandherm (tom.brandherm@msasafety.com)
 # @Link    : link
-# @Version : 0.0.1
+# @Version : 1.0.0
+# @Python  : 2.7.0
 """
 Straight line equation in two dimensional context: vec(f)(t)=vec(a)*t+vec(b) 
 """
 # =========================================================================== #
-#  Copyright 2021 MSA Safety as unpublished work
+#  Copyright 2021 Team Awesome
 # =========================================================================== #
 #  All Rights Reserved.
-#  The information contained herein is confidential property of MSA. The use,
-#  copying, transfer or disclosure of such information is prohibited except
-#  by express written agreement with MSA.
+#  The information contained herein is confidential property of Team Awesome.
+#  The use, copying, transfer or disclosure of such information is prohibited
+#  except by express written agreement with Team Awesome.
 # =========================================================================== #
 
 # =========================================================================== #
 #  SECTION: Imports                                                           
 # =========================================================================== #
+# get float division for python 2.7
+from __future__ import division
 
 import math
 import numpy as np
@@ -37,12 +40,12 @@ import numpy as np
 
 
 class StraightLineEquation(object):
-    counter : int = 1
+    counter = 1
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
 
-    def __init__(self, a: np.array, b: np.array):
+    def __init__(self, a, b):
         """
         create new straight line equation out of two points (2D-vectors) 
         Parameters
@@ -78,7 +81,7 @@ class StraightLineEquation(object):
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Public Methods
     # ----------------------------------------------------------------------- #
-    def check_points(self, otherPoints:dict, yErr:float)->list:
+    def check_points(self, otherPoints, yErr):
         """
         Check which of the found points are in line with the two points that are 
         defining the straight line equation
@@ -111,7 +114,7 @@ class StraightLineEquation(object):
                 listOfTruth.append(False)
         return listOfTruth
                 
-    def calculate(self, t: float) -> np.array:
+    def calculate(self, t):
         """
         calculate a new point by using the straight line equation
         Parameters
@@ -128,7 +131,7 @@ class StraightLineEquation(object):
         b = self.__supportVector
         return a*t+b
 
-    def calculate_t(self, x_value:float, a:np.array, b:np.array)->float:
+    def calculate_t(self, x_value, a, b):
         """
         calculate the variable t of the equation g: x(t)=a+b*t by giving points
         a, b and x. Only the x and not the y value is used in the calculation.
@@ -148,9 +151,9 @@ class StraightLineEquation(object):
             variable t the shifts the directional vector from the support vector
             to the giving x value
         """
-        return (x_value - b[0])/a[0]
+        return float(x_value - b[0])/float(a[0])
     
-    def calculate_coord_in_distance(self, refCoord:np.array, d:float)->np.array:
+    def calculate_coord_in_distance(self, refCoord, d):
         """
         Calculate the coordiantes in a given distance from a reference point.
         the new coordinates are still on the straight line equation. 
@@ -172,8 +175,8 @@ class StraightLineEquation(object):
         x, y = self.__seperate_2Dvector(refCoord)
         # calculate the single constants c
         c1 = a1**2 + a2**2
-        c2 = (a1*(x-b1)+a2*(y-b2)) / c1
-        c3 =  ((b1-x)**2 + (b2-y)**2 - d**2) / c1
+        c2 = float(a1*(x-b1)+a2*(y-b2)) / float(c1)
+        c3 =  float((b1-x)**2 + (b2-y)**2 - d**2) / float(c1)
         c4 = c2**2 - c3
         # calculate t from the pq-formula
         t = c2 + np.sqrt(c4)
@@ -184,7 +187,7 @@ class StraightLineEquation(object):
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Private Methods
     # ----------------------------------------------------------------------- #
-    def __calculate_angle(self, a:np.array,b:np.array)->float:
+    def __calculate_angle(self, a,b):
         """
         calculate angle between the straight line equation and the x axis
         Parameters
@@ -199,14 +202,14 @@ class StraightLineEquation(object):
         float
             angle between straight line equation and the x axis in degree
         """
-        dX = b[0]-a[0]
-        dY = b[1]-a[1]
+        dX = float(b[0]-a[0])
+        dY = float(b[1]-a[1])
         angle_in_radians = math.atan(dY/dX)      
         angle_in_degrees = math.degrees(angle_in_radians)
         return angle_in_degrees
 
     
-    def __get_error_range(self, x:float, yErr:float)->tuple:
+    def __get_error_range(self, x, yErr):
         """
         calculate the upper and lower y value to know if the analaysed 
         point is into the acceptable range or not.
@@ -240,7 +243,7 @@ class StraightLineEquation(object):
             tMin, self.__directionVector, lower_supportVector)[1]
         return yMin, yMax
 
-    def __seperate_2Dvector(self, vector:np.array)->tuple:
+    def __seperate_2Dvector(self, vector):
         return vector.item(0), vector.item(1)
         
 # =========================================================================== #

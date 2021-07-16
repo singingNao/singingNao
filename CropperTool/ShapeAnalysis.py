@@ -3,7 +3,8 @@
 # @Date    : 2021-04-14 14:57:35
 # @Author  : Tom Brandherm (s_brandherm19@stud.hwr-berlin.de)
 # @Link    : link
-# @Version : 0.0.1
+# @Version : 1.0.0
+# @Python  : 2.7.0
 """
 Class for analysing the shape of a random number and position of found points.
 """
@@ -20,11 +21,15 @@ Class for analysing the shape of a random number and position of found points.
 #  SECTION: Imports                                                           
 # =========================================================================== #
 # standard:
+# get float division for python 2.7
+from __future__ import division
+
 import numpy as np
 import math
 
 from numpy.core import numeric
 from numpy.core.defchararray import upper
+
 # local:
 import StraightLineEquation as sle
 # =========================================================================== #
@@ -49,7 +54,7 @@ class Grid(object):
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
 
-    def __init__(self, coordinates:dict):
+    def __init__(self, coordinates):
         # dict of tuples with (x,y)
         self.__coordiantes = self.__clustering(coordinates)
         # total number of found points
@@ -74,7 +79,7 @@ class Grid(object):
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Public Methods
     # ----------------------------------------------------------------------- #
-    def find_rectangles(self)->dict:
+    def find_rectangles(self):
         """
         Find the corners of every rectangle on the game board.
         Returns
@@ -193,7 +198,7 @@ class Grid(object):
         return A
     
     
-    def __clustering(self, coords: dict) -> dict:
+    def __clustering(self, coords):
         """
         Cluster the coordinates by the distance. Are two ore more coordinates
         in a radial distance range of the given minimal distance there a forming
@@ -210,29 +215,54 @@ class Grid(object):
             dict of four corner coordintates
         """
         coords = list(coords.values())
-        cluster = {1:[], 2: [], 3:[],4:[]}
+        cluster = dict()
         new_coords = list()
-        for key in range(1,5):
+        key_counter = 0
+        while coords:
+            key_counter += 1
+            cluster[key_counter] = list()
             for i, coord in enumerate(coords):
                 if i == 0:
-                    cluster[key].append(coord)
+                    cluster[key_counter].append(coord)
                 else:
-                    vector1 = np.asarray(cluster[key][0])
+                    vector1 = np.asarray(cluster[key_counter][0])
                     vector2 = np.asarray(coord)
                     dist = np.linalg.norm(vector1-vector2)
                     if dist < MINIMAL_DISTANCE:
-                        cluster[key].append(coord)
+                        cluster[key_counter].append(coord)
                     else:
                         new_coords.append(coord)
             coords=new_coords
             new_coords = []
             # calculating the mean of the x and the y value of all coordinates
             # in one cluster. the result is one statistical center point
-            cluster[key] = self.__find_center(cluster[key])
+            cluster[key_counter] = self.__find_center(cluster[key_counter])
+        cluster = self.__delete_wrong_detected_cluster(cluster)
+        return cluster
+    
+    
+    def __delete_wrong_detected_cluster(self, cluster):
+        """
+        If more than 4 clusters are found, the "middle" clusters are removed.
+
+        Parameters
+        ----------
+        cluster : dict
+            cluster with a potential lenght of more than 4 elements
+
+        Returns
+        -------
+        dict
+            cluster with length of 4
+        """
+        if len(cluster) > 4:
+            rm_keys = cluster.keys()[2:-2]
+            for key in rm_keys:
+                del cluster[key]
         return cluster
             
-        
-    def __find_center(self, coords:list)->tuple:
+    
+    def __find_center(self, coords):
         """
         calculating the mean of the x and y value for a list of tuple coordinates
 
@@ -258,7 +288,7 @@ class Grid(object):
         return (mean_X, mean_Y)
             
             
-    def __sort_corners(self)->dict:
+    def __sort_corners(self):
         """
         find the corners from the "rectangular" shaped grid:
         
@@ -271,12 +301,17 @@ class Grid(object):
         dict
             4 corner coordinates
         """
+        ###### 0.Step
+        # check via the x value which red dot was recognized at first
+        # resort the values
+        self.__sort_coordiantes()
         ###### 1.Step
         # find corner C and A by summing up the y and y values and using the one with the
         # biggest sum value for C and the lowest for A
         max_sum_val = 0
         min_sum_val = 0
         coords = list(self.__coordiantes.values())
+        
         for coord in coords:
             sum_value = coord[0] + coord[1]
             if sum_value>max_sum_val:
@@ -299,7 +334,26 @@ class Grid(object):
         return {'A':A,'B':B,'C':C,'D':D}
   
   
-    def __calculate_missing_knots(self)->np.array:
+    def __sort_coordiantes(self):
+        """
+        If the image is twisted so that the "wrong" corner is detected
+        first, the coordiantes switch back to normal by analysing the
+        x value.
+        """
+        keys = self.__coordiantes.keys()
+        p1 = self.__coordiantes[keys[0]]
+        p2 = self.__coordiantes[keys[1]]
+        p3 = self.__coordiantes[keys[2]]
+        p4 = self.__coordiantes[keys[3]]
+        if p1[0] < p2[0]:
+            self.__coordiantes[keys[0]] = p2
+            self.__coordiantes[keys[1]] = p1
+        if p3[0] < p4[0]:
+            self.__coordiantes[keys[2]] = p4
+            self.__coordiantes[keys[3]] = p3
+  
+  
+    def __calculate_missing_knots(self):
         """
         Calculating the missing knots out of the symmetrie
         and the 4 corner coordinates.
@@ -336,7 +390,7 @@ class Grid(object):
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
-def check_inBetween(value: float, upper: float = 0, lower:float=0)->bool:
+def check_inBetween(value, upper = 0, lower = 0):
     """
     check if the value is in a specified range
     Parameters
@@ -355,7 +409,7 @@ def check_inBetween(value: float, upper: float = 0, lower:float=0)->bool:
     return lower <= value and value <= upper
  
 
-def round_data(data, err=0, digits=-1) -> tuple:
+def round_data(data, err=0, digits=-1):
     """
     round_data
     Round the data by using DIN 1333. The position of the first segnificant␣
@@ -390,8 +444,8 @@ def round_data(data, err=0, digits=-1) -> tuple:
                 break
     else:
         counter = digits
-    rounded_err = format(err, f'.{counter}f')
-    rounded_data = format(data, f'.{counter}f')
+    rounded_err = round(err, counter)
+    rounded_data = round(data, counter)
     return rounded_data, rounded_err
 # =========================================================================== #
 #  SECTION: Main Body                                                         

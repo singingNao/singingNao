@@ -3,9 +3,10 @@
 # @Date    : 2021-04-14 14:57:35
 # @Author  : Tom Brandherm (s_brandherm19@stud.hwr-berlin.de)
 # @Link    : link
-# @Version : 0.0.1
+# @Version : 1.0.0
+# @Python  : 2.7.0
 """
-tool for cropping a game board of rectangular shapes into single images
+Tool for cropping a game board of rectangular shapes into single images
 """
 # =========================================================================== #
 #  Copyright 2021 Team Awesome
@@ -20,6 +21,9 @@ tool for cropping a game board of rectangular shapes into single images
 #  SECTION: Imports                                                           
 # =========================================================================== #
 # standard:
+# get float division for python 2.7
+from __future__ import division 
+
 import cv2
 import numpy as np
 import time
@@ -31,7 +35,7 @@ import ShapeAnalysis
 #  SECTION: Global definitions
 # =========================================================================== #
 # path of the taken photo of nao
-FILENAME = "Testbilder/photo_test6_3.jpg"
+FILENAME = "Testbilder/NaoImages/musicNotes2.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -40,8 +44,8 @@ UPPER_RED= np.array([180, 255, 255])
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
-def read_image(fileName:str)->np.array:
-    """read in the the image file to work with it in the scipt
+def read_image(fileName):
+    """read in the the image file to work with it in the script
 
     Parameters
     ----------
@@ -59,7 +63,7 @@ def read_image(fileName:str)->np.array:
     return cv2.imread(image_path)
 
 
-def find_red_dots(img:np.array, debug=True)->dict:
+def find_red_dots(img, debug=True):
     """finding red dots on an image
 
     Parameters
@@ -89,8 +93,8 @@ def find_red_dots(img:np.array, debug=True)->dict:
     
     #find the position of the contours
     contours, hierarchy = cv2.findContours(
-        thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    
+        thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[-2:]
+
     count = 0
     points = dict()
     for c in contours:
@@ -113,7 +117,7 @@ def find_red_dots(img:np.array, debug=True)->dict:
     return points
 
 
-def find_paper(img: np.array) -> np.array:
+def find_paper(img):
     """
     finding the paper/game board in the image and cropping the unecessary stuff
 
@@ -137,8 +141,7 @@ def find_paper(img: np.array) -> np.array:
     kernel = np.ones((9, 9), np.uint8)
     morph = cv2.morphologyEx(morph, cv2.MORPH_ERODE, kernel)
     # get largest contour
-    contours = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    contours = contours[0] if len(contours) == 2 else contours[1]
+    contours, _ = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2:]
     area_thresh = 0
     for c in contours:
         area = cv2.contourArea(c)
@@ -158,7 +161,7 @@ def find_paper(img: np.array) -> np.array:
     return result
  
  
-def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
+def cut_rectangles(img, edges, count, debug=True):
     """
     cut out the single rectangles and save them into new images
 
@@ -178,15 +181,15 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
     ## (1) Crop the bounding rect
     rect = cv2.boundingRect(pts)
     x, y, w, h = rect
-    croped = original_image_copy[y:y+h, x:x+w]
+    cropped = original_image_copy[y:y+h, x:x+w]
     
     ## (2) make mask
     pts2 = pts - pts.min(axis=0)
-    mask = np.zeros(croped.shape[:2], np.uint8)
+    mask = np.zeros(cropped.shape[:2], np.uint8)
     cv2.drawContours(mask, [pts2], -1, (255, 255, 255), -1, cv2.LINE_AA)
     
     ## (3) do bit-op
-    dst = cv2.bitwise_and(croped, croped, mask=mask)
+    dst = cv2.bitwise_and(cropped, cropped, mask=mask)
     
     ## (4) save images
     path = os.path.dirname(os.path.abspath(__file__))
@@ -210,7 +213,7 @@ def cut_rectangles(img:np.array, edges:list, count:int, debug=False):
     area = size[0]*size[1]
     return area
 
-def warp_perspektive(img:np.array, corners:list)->np.array:
+def warp_perspektive(img, corners):
     """
     warpes the perspective of the image with the information of the 
     red dot corners (needs corners to function!!!)
@@ -229,10 +232,10 @@ def warp_perspektive(img:np.array, corners:list)->np.array:
     """
     
     #TODO questionable coordinate order
-    pt_A = corners['D']
-    pt_B = corners['A']
-    pt_C = corners['B']
-    pt_D = corners['C']
+    pt_A = corners['A']  # corners['D']
+    pt_B = corners['D']  # corners['A']
+    pt_C = corners['C']  # corners['B']
+    pt_D = corners['B']  # corners['C']
     
     # L2 norm
     width_AD = np.sqrt(((pt_A[0] - pt_D[0]) ** 2) + ((pt_A[1] - pt_D[1]) ** 2))
@@ -256,16 +259,15 @@ def warp_perspektive(img:np.array, corners:list)->np.array:
         img_copy, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
     return cv2.resize(out, (1500, 1000))
 
-def check_cutouts(sizes:list()):
+def check_cutouts(sizes):
     #TODO define consequence, wenn std above 10%
     np_sizes = np.array(sizes)
     mean = np.mean(np_sizes)
     std = ShapeAnalysis.round_data(data=np.std(np_sizes)/mean*100,digits =2)[0]
-    print(f"The cutouts have a standard deviation of {std} %")
     if int(std)>=10:
         pass
         
-def seperate_the_objects(fileName:str):
+def seperate_the_objects(fileName):
     """
     seperates the rectangle shapes from the game board image
 
@@ -288,8 +290,7 @@ def seperate_the_objects(fileName:str):
         #quit()
         # warp the perspektive
         warped = warp_perspektive(img, Shape.corners)
-        points = find_red_dots(warped)
-        # find the new coordinates out of the warped photov
+        # find the new coordinates out of the warped photo
         new_points = find_red_dots(warped)
         Shape.set_coordinates(new_points)
         # find rectangles
@@ -311,4 +312,3 @@ def seperate_the_objects(fileName:str):
 
 if __name__ == '__main__':
     seperate_the_objects(FILENAME)
-    
