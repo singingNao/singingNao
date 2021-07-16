@@ -37,9 +37,9 @@ import ShapeAnalysis
 # =========================================================================== #
 # path of the taken photo of nao
 # FILENAME = "Testbilder/NaoImages/board4.jpg"
-FILENAME = "C:\Users\omare_h3adiuf\Desktop\music_cards_backup.jpg"
+# FILENAME = "C:\Users\omare_h3adiuf\Desktop\music_cards_backup.jpg"
 # FILENAME = "C:\Users\omare_h3adiuf\Desktop\image.jpg"
-# FILENAME = "/data/home/nao/recordings/cameras/image.jpg"
+FILENAME = "/data/home/nao/recordings/cameras/image.jpg"
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -327,10 +327,8 @@ def transformePoints(p, matrix):
 # =========================================================================== #
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     'path', help='path to made image from nao')
-    # args = parser.parse_args()
-    # if args.path:
-    #     FILENAME = args.path
-    seperate_the_objects(FILENAME)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--path", type=str, default=FILENAME, help="path of the taken (music board) image")
+    args = parser.parse_args()
+    seperate_the_objects(args.path)
