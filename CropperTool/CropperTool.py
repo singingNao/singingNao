@@ -24,6 +24,7 @@ Tool for cropping a game board of rectangular shapes into single images
 # get float division for python 2.7
 from __future__ import division 
 
+import argparse
 import cv2
 import numpy as np
 import time
@@ -34,9 +35,6 @@ import ShapeAnalysis
 # =========================================================================== #
 #  SECTION: Global definitions
 # =========================================================================== #
-# path of the taken photo of nao
-FILENAME = "Testbilder/NaoImages/musicNotes2.jpg"
-
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
 UPPER_RED= np.array([180, 255, 255])
@@ -311,4 +309,8 @@ def seperate_the_objects(fileName):
 # =========================================================================== #
 
 if __name__ == '__main__':
-    seperate_the_objects(FILENAME)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'path', help='path to made image from nao')
+    args = parser.parse_args()
+    seperate_the_objects(args.path)
