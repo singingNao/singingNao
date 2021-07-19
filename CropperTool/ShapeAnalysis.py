@@ -35,8 +35,7 @@ import StraightLineEquation as sle
 # =========================================================================== #
 #  SECTION: Global definitions
 # =========================================================================== #
-# find nearest neighbour, but exclude same point
-MINIMAL_DISTANCE = 100
+# find nearest neighbour, but exclude same poinMINIMAL_DISTANCE = 200
 # amount of red dots in one horizantal line 
 DOTS_IN_LINE = 6
 
@@ -311,7 +310,7 @@ class Grid(object):
         max_sum_val = 0
         min_sum_val = 0
         coords = list(self.__coordiantes.values())
-        
+
         for coord in coords:
             sum_value = coord[0] + coord[1]
             if sum_value>max_sum_val:
@@ -325,7 +324,8 @@ class Grid(object):
         coords.remove(C)
         ###### 2.Step
         # determine B and D
-        if check_inBetween(coords[0][0], A[0]+MINIMAL_DISTANCE, A[0]-MINIMAL_DISTANCE):
+
+        if coords[0][0] < coords[1][0]:
             B = coords[0]
             D = coords[1]
         else:
@@ -345,6 +345,7 @@ class Grid(object):
         p2 = self.__coordiantes[keys[1]]
         p3 = self.__coordiantes[keys[2]]
         p4 = self.__coordiantes[keys[3]]
+
         if p1[0] < p2[0]:
             self.__coordiantes[keys[0]] = p2
             self.__coordiantes[keys[1]] = p1

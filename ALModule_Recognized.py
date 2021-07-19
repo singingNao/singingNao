@@ -4,6 +4,7 @@ import time
 
 PIP = "192.168.226.118"
 PPORT = 9559
+PATH = "/data/home/nao/project21/singingNao2.7/MakingMusicTool/"
 
 class PictureDetactionModule(object):
     """
@@ -31,23 +32,40 @@ class PictureDetactionModule(object):
         self.vision_recognition = self.session.service("ALVisionRecognition")
         self.vision_recognition.subscribe("VisionRecognition", 500, 0.0)
         self.got_picture = False
+        self.note_index = 1
+        self.music_dict = dict()
 
     def on_picture_detected(self, value):
         """
         Callback for event PictureDetected.
         """
-        self.tts.say("geht")
+
         if value == []:  # empty value when the recognized object disappears
             self.got_picture = False
         elif not self.got_picture:  # only speak the first time a recognized object appears
             self.got_picture = True
-            print "I saw a recognized object! "
-            self.tts.say("I saw a recognized object! ")
+            # self.tts.say("I saw a recognized object! ")
             # First Field = TimeStamp.
             timeStamp = value[0]
-            print "TimeStamp is: " + str(timeStamp)
-            object_data = value[1]
-            print "Object data: " + str(object_data)
+            # print "TimeStamp is: " + str(timeStamp)
+            music_card_category = value[1][0][0][0]
+            music_card_name = value[1][0][0][1]
+
+            if music_card_category == "instrument":
+                self.note_index = 1
+                self.music_dict = dict()
+                self.music_dict["instrument"]= music_card_name
+            elif music_card_category == "volume":
+                self.music_dict["volume"]= music_card_name
+            elif music_card_category == "note":
+                self.music_dict["note" + str(self.note_index)] = music_card_name
+                self.note_index += 1
+            self.tts.say(music_card_name)
+
+
+        print self.music_dict
+
+
 
     def run(self):
         """

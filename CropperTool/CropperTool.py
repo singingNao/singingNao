@@ -38,8 +38,9 @@ import ShapeAnalysis
 # path of the taken photo of nao
 # FILENAME = "Testbilder/NaoImages/board4.jpg"
 # FILENAME = "C:\Users\omare_h3adiuf\Desktop\music_cards_backup.jpg"
-# FILENAME = "C:\Users\omare_h3adiuf\Desktop\image.jpg"
-FILENAME = "/data/home/nao/recordings/cameras/image.jpg"
+FILENAME = "C:\Users\omare_h3adiuf\Desktop\image.jpg"
+# FILENAME = "/data/home/nao/recordings/cameras/image.jpg"
+DEBUG_STATE = True
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -67,7 +68,7 @@ def read_image(fileName):
     return cv2.imread(image_path)
 
 
-def find_red_dots(img, debug=False):
+def find_red_dots(img, debug=DEBUG_STATE):
     """finding red dots on an image
 
     Parameters
@@ -165,7 +166,7 @@ def find_paper(img):
     return result
  
  
-def cut_rectangles(img, edges, count, debug=False):
+def cut_rectangles(img, edges, count, debug=DEBUG_STATE):
     """
     cut out the single rectangles and save them into new images
 
@@ -198,8 +199,7 @@ def cut_rectangles(img, edges, count, debug=False):
     ## (4) save images
     path = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(path, "cutouts/roi")
-    dst = cv2.resize(dst, (300, 500
-                           ))
+    dst = cv2.resize(dst, (300, 500))
     cv2.imwrite(image_path+str(count)+".jpg", dst)
     
     if debug:
@@ -218,7 +218,7 @@ def cut_rectangles(img, edges, count, debug=False):
     area = size[0]*size[1]
     return area
 
-def warp_perspektive(img, corners, debug= False):
+def warp_perspektive(img, corners, debug= DEBUG_STATE):
     """
     warpes the perspective of the image with the information of the 
     red dot corners (needs corners to function!!!)
