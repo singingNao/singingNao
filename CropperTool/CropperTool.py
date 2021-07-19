@@ -257,11 +257,13 @@ def warp_perspektive(img, corners, debug= False):
                              [maxWidth - 10, 10]])
     # Compute the perspective transform M
     M = cv2.getPerspectiveTransform(input_pts, output_pts)
-    new_pt_A = transformePoints(pt_A, M)
-    new_pt_B = transformePoints(pt_B, M)
-    new_pt_C = transformePoints(pt_C, M)
-    new_pt_D = transformePoints(pt_D, M)
+    # calculate the new corner points after perspective change
+    new_pt_A = transformPoints(pt_A, M)
+    new_pt_B = transformPoints(pt_B, M)
+    new_pt_C = transformPoints(pt_C, M)
+    new_pt_D = transformPoints(pt_D, M)
     new_points={1:new_pt_C, 2:new_pt_B, 3:new_pt_D, 4:new_pt_A}
+    
     img_copy = np.copy(img)
     out = cv2.warpPerspective(
         img_copy, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
@@ -277,7 +279,7 @@ def check_cutouts(sizes):
     mean = np.mean(np_sizes)
     std = ShapeAnalysis.round_data(data=np.std(np_sizes)/mean*100,digits =2)[0]
     if int(std)>=10:
-        pass
+        print()
         
 def seperate_the_objects(fileName):
     """
@@ -316,7 +318,22 @@ def seperate_the_objects(fileName):
         print(str(e))
     print(float(time.time()-begin))
 
-def transformePoints(p, matrix):
+def transformPoints(p, matrix):
+    """
+    Spacial transformation of the points p with the matrix to new coordinates.
+
+    Parameters
+    ----------
+    p : tuple
+        old coordinates (x,y)
+    matrix : np.array
+        transformation matrix
+
+    Returns
+    -------
+    tuple
+        new coordinates (x,y)
+    """
     px = float(matrix[0][0] * p[0] + matrix[0][1] * p[1] + matrix[0][2]) / \
          float((matrix[2][0] * p[0] + matrix[2][1] * p[1] + matrix[2][2]))
     py = float(matrix[1][0] * p[0] + matrix[1][1] * p[1] + matrix[1][2]) / \
