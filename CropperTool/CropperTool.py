@@ -3,7 +3,7 @@
 # @Date    : 2021-04-14 14:57:35
 # @Author  : Tom Brandherm (s_brandherm19@stud.hwr-berlin.de)
 # @Link    : link
-# @Version : 1.0.0
+# @Version : 1.0.1
 # @Python  : 2.7.0
 """
 Tool for cropping a game board of rectangular shapes into single images
@@ -40,7 +40,6 @@ import ShapeAnalysis
 # FILENAME = "C:\Users\omare_h3adiuf\Desktop\music_cards_backup.jpg"
 FILENAME = "C:\Users\omare_h3adiuf\Desktop\image.jpg"
 # FILENAME = "/data/home/nao/recordings/cameras/image.jpg"
-DEBUG_STATE = True
 
 # range of red colors
 LOWER_RED = np.array([170, 50, 50])
@@ -68,7 +67,7 @@ def read_image(fileName):
     return cv2.imread(image_path)
 
 
-def find_red_dots(img, debug=DEBUG_STATE):
+def find_red_dots(img, debug=False):
     """finding red dots on an image
 
     Parameters
@@ -116,9 +115,11 @@ def find_red_dots(img, debug=DEBUG_STATE):
     if debug:
         debug = img.copy()
         debug = cv2.resize(debug, (750, 500))
-        cv2.imshow('test', debug)
+        cv2.imshow('Found Red Dots', debug)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        print("The found red points are: ")
+        print(points)
     return points
 
 
@@ -166,7 +167,7 @@ def find_paper(img):
     return result
  
  
-def cut_rectangles(img, edges, count, debug=DEBUG_STATE):
+def cut_rectangles(img, edges, count, debug=False):
     """
     cut out the single rectangles and save them into new images
 
@@ -210,7 +211,7 @@ def cut_rectangles(img, edges, count, debug=DEBUG_STATE):
         thickness = 2
         image = cv2.polylines(img.copy(), [pts], True, color, 8)
         cv2.imwrite(image_path + str(count)+".jpg", image)
-        cv2.imshow('test',image)
+        cv2.imshow('Found Rectangles',image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -218,7 +219,7 @@ def cut_rectangles(img, edges, count, debug=DEBUG_STATE):
     area = size[0]*size[1]
     return area
 
-def warp_perspektive(img, corners, debug= DEBUG_STATE):
+def warp_perspektive(img, corners, debug= False):
     """
     warpes the perspective of the image with the information of the 
     red dot corners (needs corners to function!!!)
@@ -268,10 +269,13 @@ def warp_perspektive(img, corners, debug= DEBUG_STATE):
     out = cv2.warpPerspective(
         img_copy, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
     if debug:
-        cv2.imshow("test", out)
+        print("The clusterd corners are: ")
+        print(corners)
+        cv2.imshow("New Perspective", out)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     return out , new_points
+
 
 def check_cutouts(sizes):
     #TODO define consequence, wenn std above 10%
@@ -279,9 +283,15 @@ def check_cutouts(sizes):
     mean = np.mean(np_sizes)
     std = ShapeAnalysis.round_data(data=np.std(np_sizes)/mean*100,digits =2)[0]
     if int(std)>=10:
-        print()
-        
-def seperate_the_objects(fileName):
+        print("looks not that good :(")
+     
+def get_center(image):
+    dimensions = image.shape
+    height = dimensions[0]
+    width = dimensions[1]
+    return width/2, height/2
+       
+def seperate_the_objects(fileName, debug):
     """
     seperates the rectangle shapes from the game board image
 
@@ -299,24 +309,28 @@ def seperate_the_objects(fileName):
         # Find paper and resize
         paper = find_paper(img)
         # Find red dots
-        points = find_red_dots(paper)
-        Shape = ShapeAnalysis.Grid(points)
+        points = find_red_dots(paper, debug=debug)
+        image_center = get_center(paper)
+        Shape = ShapeAnalysis.Grid(image_center, points)
 
         # warp the perspektive
-        warped, new_points = warp_perspektive(img, Shape.corners)
+        warped, new_points = warp_perspektive(img, Shape.corners, debug=debug)
         Shape.set_coordinates(new_points)
         # find rectangles
         rectangles = Shape.find_rectangles()
         sizes = list()
         for key in rectangles:
-            sizes.append(cut_rectangles(warped, rectangles[key], key))
+            sizes.append(cut_rectangles(
+                warped, rectangles[key], key, debug=debug))
         
         check_cutouts(sizes)
             
     except Exception as e:
         print('error:')
         print(str(e))
-    print(float(time.time()-begin))
+    print("Time for cutting: ")
+    print(str(float(time.time()-begin))+'s')
+
 
 def transformPoints(p, matrix):
     """
@@ -346,6 +360,8 @@ def transformPoints(p, matrix):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--path", type=str, default=FILENAME, help="path of the taken (music board) image")
+        "--path", dest='path', type=str, default=FILENAME, help="path of the taken (music board) image")
+    parser.add_argument(
+        "--debug", dest='debug', type=bool, default=False, help="enable the debug mode")
     args = parser.parse_args()
-    seperate_the_objects(args.path)
+    seperate_the_objects(args.path, args.debug)
