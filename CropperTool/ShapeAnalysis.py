@@ -3,7 +3,7 @@
 # @Date    : 2021-04-14 14:57:35
 # @Author  : Tom Brandherm (s_brandherm19@stud.hwr-berlin.de)
 # @Link    : link
-# @Version : 1.0.0
+# @Version : 1.0.2
 # @Python  : 2.7.0
 """
 Class for analysing the shape of a random number and position of found points.
@@ -26,6 +26,7 @@ from __future__ import division
 
 import numpy as np
 import math
+import decimal
 
 from numpy.core import numeric
 from numpy.core.defchararray import upper
@@ -35,10 +36,12 @@ import StraightLineEquation as sle
 # =========================================================================== #
 #  SECTION: Global definitions
 # =========================================================================== #
-# find nearest neighbour, but exclude same poinMINIMAL_DISTANCE = 200
+# find nearest neighbour, but exclude same points (100 is a good fitting value!!)
+MINIMAL_DISTANCE = 100
 # amount of red dots in one horizantal line 
 DOTS_IN_LINE = 6
 
+  
 # =========================================================================== #
 #  SECTION: Class definitions
 # =========================================================================== #
@@ -53,13 +56,15 @@ class Grid(object):
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
 
-    def __init__(self, coordinates):
+    def __init__(self, center, coordinates):
+        self.image_center = np.asarray(center)
         # dict of tuples with (x,y)
         self.__coordiantes = self.__clustering(coordinates)
         # total number of found points
         self.__knots = len(coordinates)
         # corners
         self.corners = self.__sort_corners()
+        
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Getter/Setter
@@ -213,14 +218,14 @@ class Grid(object):
         dict
             dict of four corner coordintates
         """
-        coords = list(coords.values())
+        coords_list = list(coords.values())
         cluster = dict()
         new_coords = list()
         key_counter = 0
-        while coords:
+        while coords_list:
             key_counter += 1
             cluster[key_counter] = list()
-            for i, coord in enumerate(coords):
+            for i, coord in enumerate(coords_list):
                 if i == 0:
                     cluster[key_counter].append(coord)
                 else:
@@ -231,7 +236,7 @@ class Grid(object):
                         cluster[key_counter].append(coord)
                     else:
                         new_coords.append(coord)
-            coords=new_coords
+            coords_list=new_coords
             new_coords = []
             # calculating the mean of the x and the y value of all coordinates
             # in one cluster. the result is one statistical center point
@@ -254,12 +259,32 @@ class Grid(object):
         dict
             cluster with length of 4
         """
-        if len(cluster) > 4:
-            rm_keys = cluster.keys()[2:-2]
-            for key in rm_keys:
-                del cluster[key]
+        number_of_clusters = len(cluster)
+        if number_of_clusters > 4:
+            rotated_cluster = self.__rotate_Coordinates_to_best_angle(cluster)
+            coords = rotated_cluster.values()
+            A, C = self.__find_A_and_C(coords)
+            vectorA = np.asarray(A)
+            vectorC = np.asarray(C)
+            distAC = np.linalg.norm(vectorA-vectorC)
+            coords.remove(A)
+            coords.remove(C)
+            for i in range(len(coords)):
+                for coord in coords:
+                    vector1 = np.asarray(coords[i])
+                    vector2 = np.asarray(coord)
+                    dist = np.linalg.norm(vector1-vector2)
+                    if check_inBetween(dist, distAC*1.1, distAC*0.9):
+                        values = [A, C, coords[i], coord]
+                        keys = list()
+                        for value in values:
+                            keys += get_keys_from_value(rotated_cluster, value)
+                        to_delete = list(set(cluster.keys()) - set(keys)) + list(set(keys) - set(cluster.keys()))
+                        for del_key in to_delete:
+                            del cluster[del_key]
+                        return cluster
         return cluster
-            
+    
     
     def __find_center(self, coords):
         """
@@ -307,19 +332,9 @@ class Grid(object):
         ###### 1.Step
         # find corner C and A by summing up the y and y values and using the one with the
         # biggest sum value for C and the lowest for A
-        max_sum_val = 0
-        min_sum_val = 0
+        
         coords = list(self.__coordiantes.values())
-
-        for coord in coords:
-            sum_value = coord[0] + coord[1]
-            if sum_value>max_sum_val:
-                max_sum_val=sum_value
-                min_sum_val=sum_value
-                C = coord
-            elif sum_value<min_sum_val:
-                min_sum_val=sum_value
-                A = coord
+        A,C = self.__find_A_and_C(coords)
         coords.remove(A)
         coords.remove(C)
         ###### 2.Step
@@ -388,6 +403,134 @@ class Grid(object):
             coord_Matrix[2].append(x3)
         
         return coord_Matrix
+    
+    def __rotate_Coordinates_to_best_angle(self, cluster):
+        """
+        Rotating the coordinates around the center of the image to
+        find the angle where the corners A and C have almost the same
+        y-value.
+
+        Parameters
+        ----------
+        cluster : dict
+            clustered coordinates
+
+        Returns
+        -------
+        dict
+            rotated coordinates
+        """
+        keys = cluster.keys()
+        #### 1. step find corner C by looking for the max value of x+y
+        Y = cluster[keys[0]][1]
+        temp = 0
+        corner_C_key = ''
+        for key in keys:
+            X = cluster[key][0]
+            Y = cluster[key][1]
+            if (X+Y) > temp:
+                temp = X+Y
+                corner_C_key = key
+                
+        reference_X = cluster[corner_C_key][0]
+        reference_Y = cluster[corner_C_key][1]
+        #### 2. step looking for the point with the shortest y and biggest x shift
+        next_key = ''
+        minimal_y_shift = 0
+        maximal_x_shift = 0
+        for key in keys:
+            if key != corner_C_key:
+                first_check = minimal_y_shift == 0 and maximal_x_shift == 0
+                X = cluster[key][0]
+                Y = cluster[key][1]
+                x_dist = abs(X-reference_X)
+                y_dist = abs(Y-reference_Y)
+                if x_dist > maximal_x_shift and y_dist < minimal_y_shift or first_check:
+                    minimal_y_shift = y_dist
+                    maximal_x_shift = x_dist
+                    next_key = key
+        #### 3. step rotate till y values of corner C and of the point from step 2 are almost equal
+        smallest_difference = abs(cluster[next_key][1]-reference_Y)
+        best_angle = 0
+        stop = 151
+        start = -150
+        step = 0.1
+        ref_angle = 0
+        while smallest_difference != 0:
+            for angle in np.arange(start, stop, step):
+                new_C = self.__rotate(cluster[corner_C_key], angle)
+                new_C_Y = new_C[1]
+                new_coord = self.__rotate(cluster[next_key], angle)
+                new_coord_Y = new_coord[1]
+                difference = abs(new_coord_Y - new_C_Y)
+                if difference < smallest_difference:
+                    smallest_difference = difference
+                    best_angle = angle
+            if ref_angle != best_angle:
+                ref_angle = best_angle
+                stop = ref_angle*(1+step)
+                start = ref_angle*(1-step)
+                step = step/2
+            else:
+                break   
+        rotated_coords =dict()
+        for key in keys:
+            rotated_coord = self.__rotate(cluster[key], best_angle)
+            rotated_coords[key]=rotated_coord
+        return rotated_coords
+    
+    
+    def __rotate(self, coord, angle):
+        """
+        Rotate the 2d coordinates coord at an angle.
+
+        Parameters
+        ----------
+        coord : tuple
+            2d coordinates
+        angle : float
+            angle in dregrees
+
+        Returns
+        -------
+        tuple
+            new 2d coordinates
+        """
+        numpy_coord = np.asarray(coord)
+        theta = np.radians(angle)
+        c, s = np.cos(theta), np.sin(theta)
+        R = np.array(((c, -s),(s, c)))
+        diff = np.subtract(numpy_coord, self.image_center)
+        new_coord = self.image_center + R.dot(diff)
+        return new_coord[0], new_coord[1]
+    
+    def __find_A_and_C(self, coords):
+        """
+        find the coners A and C with the definition, that the sum of x
+        and y is by A the smallest and by C the biggest.
+
+        Parameters
+        ----------
+        coords : list
+            list of tuple(x,y) coordinates
+
+        Returns
+        -------
+        tuple
+            coordintes of A and C
+        """
+        max_sum_val = 0
+        min_sum_val = 0
+        for coord in coords:
+            sum_value = coord[0] + coord[1]
+            if sum_value > max_sum_val:
+                max_sum_val = sum_value
+                min_sum_val = sum_value
+                C = coord
+            elif sum_value < min_sum_val:
+                min_sum_val = sum_value
+                A = coord
+        return A, C
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
@@ -448,6 +591,11 @@ def round_data(data, err=0, digits=-1):
     rounded_err = round(err, counter)
     rounded_data = round(data, counter)
     return rounded_data, rounded_err
+
+
+def get_keys_from_value(d, val):
+    return [k for k, v in d.items() if v == val]
+
 # =========================================================================== #
 #  SECTION: Main Body                                                         
 # =========================================================================== #
