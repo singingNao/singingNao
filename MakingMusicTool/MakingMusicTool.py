@@ -36,6 +36,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
+from collections import OrderedDict
 from pydub import AudioSegment
 from pydub.playback import play
 
@@ -45,6 +46,7 @@ from VisualizeSound import SoundVisualizer
 # =========================================================================== #
 # name of the input csv file
 FILENAME = "sound_pattern.csv"
+DICTANARY_KEYS = ["instrument", "volume", "note1", "note2", "note3", "note4", "note5", "note6", "note7", "note8"]
 
 # =========================================================================== #
 #  SECTION: Class definitions
@@ -58,9 +60,11 @@ class MusicMaker(object):
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Constructor
     # ----------------------------------------------------------------------- #
-    def __init__(self, fileName, bpm=60, timeSignature=4):
+    def __init__(self, fileName="", bpm=60, timeSignature=4):
         ## public
-        self.sound_pattern = self.get_sound_pattern_from_csv_file(fileName)
+        #self.sound_pattern = self.get_sound_pattern_from_csv_file(fileName)
+        self.music_beats = []
+        self.add_ordered_dict_to_music_beats()
         ## __private
         # given instrument beat audio files (wav-format!!!)
         self.__instruments =   {'drum': 'mixkit-metal-hit-drum-sound-550.wav',
@@ -72,15 +76,91 @@ class MusicMaker(object):
         # reference volume for the used audio files
         self.__ref_dBFS = -20
         self.soundtracks = list()
-        
+
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Getter/Setter
     # ----------------------------------------------------------------------- #
+    def get_music_beats(self):
+        return self.music_beats
+
+    def set_music_beats(self, index, key, value):
+        if self.music_beats == []: # to get ride of KeyError exeption
+            print("List is empty")
+        else:
+            self.music_beats[index][key] = value
 
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Public Methods
     # ----------------------------------------------------------------------- #
+    def add_ordered_dict_to_music_beats(self):
+        """
+        Added a OrderedDict with DictonaryKeys to the list music_beats
+        """
+        ordered_dict = OrderedDict.fromkeys(DICTANARY_KEYS, "")
+        self.music_beats.append(ordered_dict)
+
+    def replace_note_volume_string_with_number(self, dict):
+        """
+        Replace the note values in the dict with integer
+
+        Parameters
+        ----------
+        dict : OrderedDict()
+            OrderedDict of recognized Elements
+
+        Returns
+        -------
+        value_arr: list of values (array)
+
+        """
+        value_arr = []
+        for value in dict.values():
+            if value == 'half note':
+                value_arr.append(2)
+            elif value == 'quarter note':
+                value_arr.append(4)
+            elif value == 'eighth note':
+                value_arr.append(8)
+            elif value == 'two sixteenth notes':
+                value_arr.append(16)
+                value_arr.append(16)
+            elif value == 'piano':
+                value_arr.append(1)
+            elif value == 'mezzo forte':
+                value_arr.append(2)
+            elif value == 'forte':
+                value_arr.append(3)
+            else:
+                value_arr.append(value)
+        return value_arr
+
+    def create_music_file(self):
+        """
+        Use the imported music information to create a soundtrack.
+        """
+        music = AudioSegment.silent(duration=self.__time_signature_duration)
+        # iterating though the importet patterns
+        for dict in self.music_beats:
+            if not dict == OrderedDict.fromkeys(DICTANARY_KEYS, ""):
+                pattern = self.replace_note_volume_string_with_number(dict)
+                print(pattern)
+                sound = self.__get_instrument_sound(pattern[0])
+                sound = self.__set_volume(sound, self.__ref_dBFS)
+                volume = self.__get_volume_gain(pattern[1])
+                sound += volume
+                # get the choosen notes
+                notes = pattern[2:]
+                soundtrack = self.create_soundtrack(sound, notes)
+                music = self.__extend_soundtrack(music, soundtrack)
+                music = music.overlay(soundtrack)
+        music = self.__repeat_soundtrack(count=2, soundtrack=music)
+        music.export('new_music.wav', format='wav')
+        return music
+
+
+
+
     def get_sound_pattern_from_csv_file(self, fileName):
         """
         Import of the csv data and converting it into a dict of sound patterns.
@@ -114,29 +194,29 @@ class MusicMaker(object):
         return sound_pattern
     
     
-    def create_music_file(self):
-        """
-        Use the imported music information to create a soundtrack.
-        """
-        music = AudioSegment.silent(duration=self.__time_signature_duration)
+    #def create_music_file(self):
+        #"""
+        #Use the imported music information to create a soundtrack.
+        #"""
+        #music = AudioSegment.silent(duration=self.__time_signature_duration)
         # iterating though the importet patterns
-        for pattern in self.sound_pattern:
-            sound = self.get_instrument_sound(pattern[0])
-            sound = self.__set_volume(sound, self.__ref_dBFS)
-            volume = self.__get_volume_gain(pattern[1])
-            sound += volume
+        #for pattern in self.sound_pattern.values():
+        #    sound = self.__get_instrument_sound(pattern[0])
+        #    sound = self.__set_volume(sound, self.__ref_dBFS)
+        #    volume = self.__get_volume_gain(pattern[1])
+        #    sound += volume
             # get the choosen notes
-            notes = pattern[2:]
-            soundtrack = self.create_soundtrack(sound, notes)
-            self.soundtracks.append(soundtrack)
-            music = self.__extend_soundtrack(music, soundtrack)
-            soundtrack = self.__set_volume(soundtrack, self.__ref_dBFS)
-            music = music.overlay(soundtrack)
-            music = self.__set_volume(music, self.__ref_dBFS)
-        music = self.__repeat_soundtrack(count=2, soundtrack=music)
-        music.export('new_music.wav', format='wav')
+        #    notes = pattern[2:]
+        #    soundtrack = self.create_soundtrack(sound, notes)
+        #    self.soundtracks.append(soundtrack)
+        #    music = self.__extend_soundtrack(music, soundtrack)
+        #    soundtrack = self.__set_volume(soundtrack, self.__ref_dBFS)
+        #    music = music.overlay(soundtrack)
+        #    music = self.__set_volume(music, self.__ref_dBFS)
+        #music = self.__repeat_soundtrack(count=2, soundtrack=music)
+        #music.export('new_music.wav', format='wav')
         #print(f'Exported a soundtrack with the lenght of {len(music)}ms')
-        return music, self.soundtracks
+        #return music, self.soundtracks
         
         
     def create_soundtrack(self, sound, notes, debug = False):
@@ -232,8 +312,8 @@ class MusicMaker(object):
         absolute_path = get_absolute_path("Sounds/" + fileName)
         sound = AudioSegment.from_file(absolute_path, format="wav")
         return self.delete_silence(sound)
-        
-        
+
+
     # ----------------------------------------------------------------------- #
     #  SUBSECTION: Private Methods
     # ----------------------------------------------------------------------- #
@@ -274,6 +354,8 @@ class MusicMaker(object):
         int
             to increase by volume value
         """
+        volume = str(volume)
+
         if volume == '1':
             return 0
         if volume == '2':
@@ -321,7 +403,7 @@ class MusicMaker(object):
         AudioSegment
             background sound, which is should the situation arises extended
         """
-        
+
         if (position + len(soundtrack)) > len(main_soundtrack):
             overlap = position + len(soundtrack) - len(main_soundtrack)
             silent = AudioSegment.silent(duration=overlap)
@@ -399,7 +481,7 @@ class MusicMaker(object):
             soundtrack = soundtrack.overlay(soundtrack, 
                                             position=self.__time_signature_duration)
         return self.delete_silence(soundtrack)
-    
+
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
@@ -437,7 +519,7 @@ def pydub_to_np(audio):
 if __name__ == '__main__':
     musicMaker = MusicMaker(FILENAME, bpm=120)
     music, soundtracks = musicMaker.create_music_file()
-    
+
     """raws = list()
     for i, soundtrack in enumerate(soundtracks): 
         directory = 'Sounds/'
@@ -448,7 +530,7 @@ if __name__ == '__main__':
     raws.append(pydub_to_np(music))
     soundVisualizer = SoundVisualizer(raws)
     soundVisualizer.plot_soundtracks()"""
-    
-    
 
     
+
+
