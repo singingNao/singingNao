@@ -38,6 +38,8 @@ import numpy as np
 
 from pydub import AudioSegment
 from pydub.playback import play
+
+from VisualizeSound import SoundVisualizer
 # =========================================================================== #
 #  SECTION: Global definitions
 # =========================================================================== #
@@ -69,6 +71,7 @@ class MusicMaker(object):
         self.__time_signature_duration = self.convert_bpm_to_time_signature_duration_in_ms(bpm, timeSignature)
         # reference volume for the used audio files
         self.__ref_dBFS = -20
+        self.soundtracks = list()
         
 
     # ----------------------------------------------------------------------- #
@@ -93,7 +96,7 @@ class MusicMaker(object):
             sound pattern of the csv file
         """
         absolute_path = get_absolute_path(fileName)
-        sound_pattern = dict()
+        sound_pattern = list()
         #open csv file
         with open(absolute_path, 'rb') as file:
             reader = csv.reader(file, delimiter=',')
@@ -103,7 +106,7 @@ class MusicMaker(object):
                 row = [x for x in row if x]
                 if self.__are_notes_valid(row[2:]):
                     # add to dict
-                    sound_pattern["sound"+str(i)] = row
+                    sound_pattern.append(row)
                 else:
                     #TODO do something if notes aren't valid
                     #print(f"Check the pattern of row {i}")
@@ -117,25 +120,26 @@ class MusicMaker(object):
         """
         music = AudioSegment.silent(duration=self.__time_signature_duration)
         # iterating though the importet patterns
-        for pattern in self.sound_pattern.values():
-            sound = self.__get_instrument_sound(pattern[0])
+        for pattern in self.sound_pattern:
+            sound = self.get_instrument_sound(pattern[0])
             sound = self.__set_volume(sound, self.__ref_dBFS)
             volume = self.__get_volume_gain(pattern[1])
             sound += volume
             # get the choosen notes
             notes = pattern[2:]
             soundtrack = self.create_soundtrack(sound, notes)
+            self.soundtracks.append(soundtrack)
             music = self.__extend_soundtrack(music, soundtrack)
+            soundtrack = self.__set_volume(soundtrack, self.__ref_dBFS)
             music = music.overlay(soundtrack)
+            music = self.__set_volume(music, self.__ref_dBFS)
         music = self.__repeat_soundtrack(count=2, soundtrack=music)
         music.export('new_music.wav', format='wav')
         #print(f'Exported a soundtrack with the lenght of {len(music)}ms')
-        # play the new soundtrack via speaker
-        # play(music)
-        return music
+        return music, self.soundtracks
         
         
-    def create_soundtrack(self, sound, notes):
+    def create_soundtrack(self, sound, notes, debug = False):
         """
         Create a soundtrack out of a given instrument sound and a note pattern.
 
@@ -153,11 +157,18 @@ class MusicMaker(object):
         """
         soundtrack = AudioSegment.silent(duration=self.__time_signature_duration)
         time = 0
+        notes = notes[:-1]
+        debug_raws = list()
         for note in notes:
             soundtrack = soundtrack.overlay(sound, position=time)
-            time += self.__time_signature_duration/int(note)
+            debug_raws.append(pydub_to_np(soundtrack))
+            time += float(self.__time_signature_duration)/float(note)
             soundtrack = self.__extend_soundtrack(soundtrack, sound, time)
         soundtrack = soundtrack.overlay(sound, position=time)
+        debug_raws.append(pydub_to_np(soundtrack))
+        if debug:
+            soundVisualizer = SoundVisualizer(debug_raws)
+            soundVisualizer.plot_soundtracks()
         return soundtrack
     
     
@@ -199,33 +210,7 @@ class MusicMaker(object):
         """
         return 60*timeSignature/bpm*1000
     
-    
-    # ----------------------------------------------------------------------- #
-    #  SUBSECTION: Private Methods
-    # ----------------------------------------------------------------------- #
-    def __are_notes_valid(self, notes):
-        """
-        check notes if the sum of all notes is equal one
-
-        Parameters
-        ----------
-        pattern : list
-            list of notes
-
-        Returns
-        -------
-        bool
-            True, if sum is 1
-            False, if sum is not equal 1
-        """
-        notes_sum = 0
-        for note in notes:
-            notes_sum += 1/float(note)
-        if notes_sum == 1:
-            return True
-        return False
-
-    def __get_instrument_sound(self, instrument):
+    def get_instrument_sound(self, instrument):
         """
         Choose the instrument out of the user input pattern and returning the
         associated audio segment.
@@ -248,6 +233,32 @@ class MusicMaker(object):
         sound = AudioSegment.from_file(absolute_path, format="wav")
         return self.delete_silence(sound)
         
+        
+    # ----------------------------------------------------------------------- #
+    #  SUBSECTION: Private Methods
+    # ----------------------------------------------------------------------- #
+    def __are_notes_valid(self, notes):
+        """
+        check notes if the sum of all notes is equal one
+
+        Parameters
+        ----------
+        pattern : list
+            list of notes
+
+        Returns
+        -------
+        bool
+            True, if sum is 1
+            False, if sum is not equal 1
+        """
+        notes_sum = 0
+        for note in notes:
+            notes_sum += 1/float(note)
+        if notes_sum <= 1:
+            return True
+        return False
+
     
     def __get_volume_gain(self, volume):
         """
@@ -266,9 +277,9 @@ class MusicMaker(object):
         if volume == '1':
             return 0
         if volume == '2':
-            return 2
+            return 1
         if volume == '3':
-            return 4
+            return 2
 
     
     def __set_volume(self, sound, target_dBFS):
@@ -310,6 +321,7 @@ class MusicMaker(object):
         AudioSegment
             background sound, which is should the situation arises extended
         """
+        
         if (position + len(soundtrack)) > len(main_soundtrack):
             overlap = position + len(soundtrack) - len(main_soundtrack)
             silent = AudioSegment.silent(duration=overlap)
@@ -388,7 +400,6 @@ class MusicMaker(object):
                                             position=self.__time_signature_duration)
         return self.delete_silence(soundtrack)
     
-    
 # =========================================================================== #
 #  SECTION: Function definitions
 # =========================================================================== #
@@ -417,8 +428,7 @@ def pydub_to_np(audio):
     # get_array_of_samples returns the data in format:
     # [sample_1_channel_1, sample_1_channel_2, sample_2_channel_1, sample_2_channel_2, ....]
     # where samples are integers of sample_width bytes.
-    return np.array(audio.get_array_of_samples(), dtype=np.float32).reshape((-1, audio.channels)).T / (
-        1 << (8 * audio.sample_width)), audio.frame_rate
+    return np.array(audio.get_array_of_samples(), dtype=np.int16), audio.frame_rate
 
 
 # =========================================================================== #
@@ -426,7 +436,19 @@ def pydub_to_np(audio):
 # =========================================================================== #
 if __name__ == '__main__':
     musicMaker = MusicMaker(FILENAME, bpm=120)
-    music = musicMaker.create_music_file()
+    music, soundtracks = musicMaker.create_music_file()
+    
+    """raws = list()
+    for i, soundtrack in enumerate(soundtracks): 
+        directory = 'Sounds/'
+        exportFile = 'soundtrack'+str(i)+'.wav'
+        exportFilePath = get_absolute_path(directory + exportFile)
+        soundtrack.export(exportFilePath, format='wav')
+        #raws.append(pydub_to_np(soundtrack))
+    raws.append(pydub_to_np(music))
+    soundVisualizer = SoundVisualizer(raws)
+    soundVisualizer.plot_soundtracks()"""
+    
     
 
-
+    
